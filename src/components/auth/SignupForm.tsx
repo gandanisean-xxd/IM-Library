@@ -25,6 +25,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     program: '',
     department: '',
     expectedYearOfGraduate: '',
+    status: 'active',
+    student_campus: '',
   });
   
   const [error, setError] = useState('');
@@ -49,7 +51,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     });
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
@@ -62,40 +64,89 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
       return;
-    }
-    
-    // Create user object based on role
-    let user: any = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-      role: role,
-    };
-    
+    }    
     if (role === 'student') {
-      if (!formData.studentId || !formData.program || !formData.expectedYearOfGraduate) {
+      if (!formData.studentId || !formData.program || !formData.expectedYearOfGraduate || !formData.student_campus) {
         setError('Please fill in all required fields');
         return;
       }
-      user.studentId = formData.studentId;
-      user.program = formData.program;
-      user.expectedYearOfGraduate = formData.expectedYearOfGraduate;
+      
+      const studentData = {
+        student_id: parseInt(formData.studentId),
+        student_lastname: formData.lastName,
+        student_firstname: formData.firstName,
+        student_program: formData.program,
+        expected_graduateyear: parseInt(formData.expectedYearOfGraduate),
+        status: formData.status,
+        student_campus: formData.student_campus,
+        email: formData.email,
+        password: formData.password
+      };
+  
+      try {
+        console.log('Sending student data:', studentData);
+        
+        const response = await fetch('http://localhost:5000/api/register/student', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(studentData)
+        });
+  
+        const responseData = await response.json();
+        console.log('Server response:', responseData);
+  
+        if (response.ok) {
+          alert('Registration successful! Please login to continue.');
+          navigate('/login');
+        } else {
+          setError(responseData.message || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        setError('Server connection failed. Please try again later.');
+      }
     } else if (role === 'faculty') {
       if (!formData.facultyId || !formData.department) {
         setError('Please fill in all required fields');
         return;
       }
-      user.facultyId = formData.facultyId;
-      user.department = formData.department;
-    }
-    
-    const success = register(user);
-    
-    if (success) {
-      navigate('/user/dashboard');
-    } else {
-      setError('Registration failed. Email may already be in use.');
+      
+      const facultyData = {
+        faculty_id: parseInt(formData.facultyId),
+        faculty_lastname: formData.lastName,
+        faculty_firstname: formData.firstName,
+        college_department: formData.department,
+        status: 'active',
+        email: formData.email,
+        password: formData.password
+      };
+  
+      try {
+        console.log('Sending faculty data:', facultyData);
+        
+        const response = await fetch('http://localhost:5000/api/register/faculty', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(facultyData)
+        });
+  
+        const responseData = await response.json();
+        console.log('Server response:', responseData);
+  
+        if (response.ok) {
+          alert('Registration successful! Please login to continue.');
+          navigate('/login');
+        } else {
+          setError(responseData.message || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        setError('Server connection failed. Please try again later.');
+      }
     }
   };
   
@@ -156,6 +207,25 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
             />
           </div>
           
+          <div className="mb-4">
+            <label htmlFor="student_campus" className="block text-gray-700 font-medium mb-2">
+              Campus
+            </label>
+            <select
+              id="student_campus"
+              name="student_campus"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.student_campus}
+              onChange={handleChange}
+              required
+              >
+              <option value="">Select a campus</option>
+              <option value="San Bartolome Campus">San Bartolome Campus</option>
+              <option value="Batasan Campus">Batasan Campus</option>
+              <option value="San Francisco Campus">San Francisco Campus</option>
+            </select>
+          </div>
+
           <div className="mb-4">
             <label htmlFor="program" className="block text-gray-700 font-medium mb-2">
               Program
