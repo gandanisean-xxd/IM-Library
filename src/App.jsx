@@ -26,10 +26,10 @@ function App() {
           <Route path="/" element={<RoleSelection />} />
           <Route path="/auth/:role" element={<AuthLayout />} />
           
-          {/* Admin routes for admin role */}
-          <Route element={<RequireAuth allowedRoles={['admin']} />}>
+          {/* Admin routes for staff role */}
+          <Route element={<RequireAuth allowedRoles={['staff']} />}>
             <Route path="/admin" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="books" element={<BooksList />} />
               <Route path="students" element={<StudentsList />} />
@@ -39,23 +39,11 @@ function App() {
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>
-
-          {/* Admin routes for librarian role */}
-          <Route element={<RequireAuth allowedRoles={['librarian']} />}>
-            <Route path="/admin" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="books" element={<BooksList />} />
-              <Route path="librarians" element={<LibrariansList />} />
-              <Route path="borrowings" element={<BorrowingsList />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-          </Route>
           
           {/* User routes (student & faculty) */}
           <Route element={<RequireAuth allowedRoles={['student', 'faculty']} />}>
             <Route path="/user" element={<DashboardLayout />}>
-              <Route index element={<Navigate to="/user/dashboard" replace />} />
+            <Route index element={<Navigate to="/user/dashboard" replace />} />
               <Route path="dashboard" element={<UserDashboard />} />
               <Route path="books" element={<UserBooks />} />
               <Route path="borrows" element={<UserBorrows />} />

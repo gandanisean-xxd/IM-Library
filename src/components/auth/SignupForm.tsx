@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
 import { departments, programs } from '../../types';
 
 interface SignupFormProps {
@@ -12,7 +11,6 @@ interface SignupFormProps {
 
 const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
   const navigate = useNavigate();
-  const { register } = useAuth();
   
   const [formData, setFormData] = useState({
     firstName: '',
