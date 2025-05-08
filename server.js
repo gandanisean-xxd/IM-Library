@@ -194,6 +194,80 @@ app.post('/api/register/faculty', async (req, res) => {
     }
 });
 
+app.post('/api/login/:role', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+
+    const { role } = req.params;
+    const { email, password } = req.body;
+    let connection;
+
+    console.log('Login attempt:', { role, email }); // Debug log
+
+    try {
+        
+
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email and password are required'
+            });
+        }
+
+        connection = await oracledb.getConnection({
+            user: "system",
+            password: "taglesean",
+            connectString: "localhost:1521/xe"
+        });
+
+        let tableName;
+        switch (role) {
+            case 'student':
+                tableName = 'STUDENT';
+                break;
+            case 'faculty':
+                tableName = 'FACULTY';
+                break;
+            default:
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid role'
+                });
+        }
+
+        console.log('Executing query for:', { email, tableName }); // Debug log
+
+         const result = await connection.execute(
+            `SELECT * FROM ${tableName} WHERE UPPER(EMAIL) = UPPER(:1) AND PASSWORD = :2 AND STATUS = 'active'`,
+            [email, password],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (result.rows && result.rows.length > 0) {
+            const user = result.rows[0];
+            delete user.PASSWORD;
+    
+            // Generate token
+            const token = Buffer.from(`${user.EMAIL}:${Date.now()}`).toString('base64');
+            
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                user: user,
+                token: token // Make sure token is included
+            });
+        }
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

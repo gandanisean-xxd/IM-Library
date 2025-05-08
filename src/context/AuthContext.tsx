@@ -1,91 +1,72 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types';
-import { users } from '../mockData';
+import React, { createContext, useContext, useState } from 'react';
+
+interface User {
+  id: string;
+  email: string;
+  role: string;
+  // Add other user properties as needed
+}
+
+interface AuthData {
+  user: User;
+  token: string | null;
+  role: string;
+}
 
 interface AuthContextType {
-  currentUser: User | null;
-  login: (email: string, password: string) => boolean;
+  user: User | null;
+  token: string | null;
+  role: string | null;
+  login: (data: AuthData) => void;
   logout: () => void;
-  register: (user: Omit<User, 'id'>) => boolean;
-  isAuthenticated: boolean;
 }
 
-const AuthContext = createContext<AuthContextType>({
-  currentUser: null,
-  login: () => false,
-  logout: () => {},
-  register: () => false,
-  isAuthenticated: false,
-});
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => useContext(AuthContext);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem('token');
+  });
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+  const [role, setRole] = useState<string | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser).role : null;
+  });
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [localUsers, setLocalUsers] = useState<User[]>(users);
-
-  useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-      setIsAuthenticated(true);
+  const login = (data: AuthData) => {
+    setUser(data.user);
+    setToken(data.token);
+    setRole(data.role);
+    // Optionally save to localStorage
+    localStorage.setItem('user', JSON.stringify(data.user));
+    if (data.token) {
+      localStorage.setItem('token', data.token);
     }
-  }, []);
-
-  const login = (email: string, password: string): boolean => {
-    const user = localUsers.find(
-      (u) => u.email === email && u.password === password
-    );
-    
-    if (user) {
-      setCurrentUser(user);
-      setIsAuthenticated(true);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      return true;
-    }
-    
-    return false;
   };
 
   const logout = () => {
-    setCurrentUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('currentUser');
-  };
-
-  const register = (user: Omit<User, 'id'>): boolean => {
-    // Check if email already exists
-    const emailExists = localUsers.some((u) => u.email === user.email);
-    
-    if (emailExists) {
-      return false;
-    }
-    
-    // Generate new ID (in a real app, this would be handled by the backend)
-    const newUser = {
-      ...user,
-      id: `${localUsers.length + 1}`,
-    } as User;
-    
-    setLocalUsers([...localUsers, newUser]);
-    
-    // Auto login after registration
-    setCurrentUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
-    
-    return true;
+    setUser(null);
+    setToken(null);
+    setRole(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout, register, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, role, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
