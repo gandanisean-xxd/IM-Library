@@ -65,20 +65,40 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
       setError('Password must be at least 6 characters');
       return;
     }    
+
+    if (formData.firstName.length > 50 || formData.lastName.length > 50) {
+      setError('First name and last name must not exceed 50 characters');
+      return;
+    }
+  
+    if (formData.email.length > 255) {
+      setError('Email must not exceed 255 characters');
+      return;
+    }
+
     if (role === 'student') {
       if (!formData.studentId || !formData.program || !formData.expectedYearOfGraduate || !formData.student_campus) {
         setError('Please fill in all required fields');
         return;
       }
+
+      if (formData.studentId.length > 50) {
+        setError('Student ID must not exceed 50 characters');
+        return;
+      }
+      if (formData.program.length > 100) {
+        setError('Program must not exceed 100 characters');
+        return;
+      }
       
       const studentData = {
-        student_id: parseInt(formData.studentId),
+        student_id: formData.studentId, // Changed to string since VARCHAR2 in DB
         student_lastname: formData.lastName,
         student_firstname: formData.firstName,
         student_program: formData.program,
+        student_campus: formData.student_campus,
         expected_graduateyear: parseInt(formData.expectedYearOfGraduate),
         status: formData.status,
-        student_campus: formData.student_campus,
         email: formData.email,
         password: formData.password
       };
@@ -99,7 +119,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
   
         if (response.ok) {
           alert('Registration successful! Please login to continue.');
-          navigate('/login');
+          navigate('/');
         } else {
           setError(responseData.message || 'Registration failed');
         }
@@ -112,9 +132,18 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
         setError('Please fill in all required fields');
         return;
       }
+
+      if (formData.facultyId.length > 50) {
+        setError('Faculty ID must not exceed 50 characters');
+        return;
+      }
+      if (formData.department.length > 100) {
+        setError('Department must not exceed 100 characters');
+        return;
+      }
       
       const facultyData = {
-        faculty_id: parseInt(formData.facultyId),
+        faculty_id: formData.facultyId, // Changed to string since VARCHAR2 in DB
         faculty_lastname: formData.lastName,
         faculty_firstname: formData.firstName,
         college_department: formData.department,
