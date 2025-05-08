@@ -18,17 +18,23 @@ oracledb.autoCommit = true;
 
 async function fun() {
     let con;
-
     try {
         con = await oracledb.getConnection({
             user: "system",
             password: "taglesean",
             connectString: "localhost:1521/xe",
         });
-
         console.log('Connected to the database!');
     } catch (err) {
         console.error(err);
+    } finally {
+        if (con) {
+            try {
+                await con.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
     }
 }
 
@@ -37,6 +43,12 @@ fun();
 app.post('/api/register/student', async (req, res) => {
     let connection;
     try {
+        if (!req.body || !req.body.student_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid request data'
+            });
+        }
         connection = await oracledb.getConnection({
             user: "system",
             password: "taglesean",
@@ -50,7 +62,9 @@ app.post('/api/register/student', async (req, res) => {
             student_program,
             student_campus,
             expected_graduateyear,
-            status
+            status,
+            email,
+            password
         } = req.body;
 
         console.log('Received student data:', req.body);
@@ -63,8 +77,10 @@ app.post('/api/register/student', async (req, res) => {
                 STUDENT_PROGRAM,
                 STUDENT_CAMPUS,
                 EXPECTED_GRADUATEYEAR,
-                STATUS
-            ) VALUES (:1, :2, :3, :4, :5, :6, :7)`,
+                STATUS,
+                EMAIL,
+                PASSWORD
+            ) VALUES (:1, :2, :3, :4, :5, :6, :7, :8, :9)`,
             [
                 student_id,
                 student_lastname,
@@ -72,7 +88,9 @@ app.post('/api/register/student', async (req, res) => {
                 student_program,
                 student_campus,
                 expected_graduateyear,
-                status
+                status || 'active',
+                email,
+                password
             ]
         );
 
@@ -124,7 +142,9 @@ app.post('/api/register/faculty', async (req, res) => {
             faculty_lastname,
             faculty_firstname,
             college_department,
-            status
+            status,
+            email,
+            password
         } = req.body;
 
         console.log('Received faculty data:', req.body);
@@ -135,16 +155,19 @@ app.post('/api/register/faculty', async (req, res) => {
                 FACULTY_LASTNAME,
                 FACULTY_FIRSTNAME,
                 COLLEGE_DEPARTMENT,
-                STATUS
-            ) VALUES (:1, :2, :3, :4, :5)`,
+                STATUS,
+                EMAIL,
+                PASSWORD
+            ) VALUES (:1, :2, :3, :4, :5, :6, :7)`,
             [
                 faculty_id,
                 faculty_lastname,
                 faculty_firstname,
                 college_department,
-                status
-            ],
-            { autoCommit: true }
+                status || 'active',
+                email,
+                password
+            ]
         );
 
         console.log('Insert result:', result);
