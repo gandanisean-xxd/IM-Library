@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Bell, User } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
@@ -8,7 +8,37 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
+
+  // Get user's full name with null checks and default values
+  const userFullName = React.useMemo(() => {
+    if (!user) return '';
+    
+    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
+      return `${user.STUDENT_FIRSTNAME} ${user.STUDENT_LASTNAME}`;
+    }
+    
+    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
+      return `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`;
+    }
+    
+    return '';
+  }, [user]);
+
+  // Get user initials with null checks
+  const userInitials = React.useMemo(() => {
+    if (!user) return '';
+    
+    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
+      return `${user.STUDENT_FIRSTNAME.charAt(0)}${user.STUDENT_LASTNAME.charAt(0)}`;
+    }
+    
+    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
+      return `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`;
+    }
+    
+    return '';
+  }, [user]);
 
   return (
     <header className="bg-white shadow-sm z-20">
@@ -24,19 +54,27 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <button className="p-1 text-gray-600 rounded-full hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative">
+          <button 
+            className="p-1 text-gray-600 rounded-full hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative"
+            aria-label="Notifications"
+          >
             <Bell size={20} />
             <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
           </button>
           
-          <div className="relative">
-            <button className="flex items-center text-sm font-medium text-gray-700 rounded-full hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-              <span className="hidden md:block mr-2">{currentUser?.firstName} {currentUser?.lastName}</span>
-              <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                {currentUser?.firstName?.charAt(0)}{currentUser?.lastName?.charAt(0)}
-              </div>
-            </button>
-          </div>
+          {user && (
+            <div className="relative">
+              <button 
+                className="flex items-center text-sm font-medium text-gray-700 rounded-full hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                aria-label="User menu"
+              >
+                <span className="hidden md:block mr-2">{userFullName}</span>
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+                  {userInitials}
+                </div>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

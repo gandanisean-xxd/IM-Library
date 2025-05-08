@@ -1,10 +1,14 @@
 import React, { createContext, useContext, useState } from 'react';
 
 interface User {
-  id: string;
-  email: string;
+  STUDENT_ID?: string;
+  FACULTY_ID?: string;
+  STUDENT_FIRSTNAME?: string;
+  STUDENT_LASTNAME?: string;
+  FACULTY_FIRSTNAME?: string;
+  FACULTY_LASTNAME?: string;
+  EMAIL: string;
   role: string;
-  // Add other user properties as needed
 }
 
 interface AuthData {
