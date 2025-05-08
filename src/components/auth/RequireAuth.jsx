@@ -18,7 +18,7 @@ const RequireAuth = ({ allowedRoles }) => {
   if (!allowedRoles.includes(role)) {
     console.log('User role not allowed:', role);
     return <Navigate to="/" replace />;
-  }
+}
 
   console.log('Auth successful, rendering outlet');
   return <Outlet />;

@@ -21,6 +21,10 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
     if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
       return `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`;
     }
+
+    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
+      return `${user.LIBRARIAN_FIRSTNAME} ${user.LIBRARIAN_LASTNAME}`;
+    }
     
     return '';
   }, [user]);
@@ -37,7 +41,18 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
       return `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`;
     }
     
+    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
+      return `${user.LIBRARIAN_FIRSTNAME.charAt(0)}${user.LIBRARIAN_LASTNAME.charAt(0)}`;
+    }
+
     return '';
+  }, [user]);
+
+  const roleDisplay = React.useMemo(() => {
+    if (!user?.role) return '';
+    
+    // Capitalize first letter of role
+    return user.role.charAt(0).toUpperCase() + user.role.slice(1);
   }, [user]);
 
   return (
@@ -63,12 +78,15 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
           </button>
           
           {user && (
-            <div className="relative">
+            <div className="relative group">
               <button 
                 className="flex items-center text-sm font-medium text-gray-700 rounded-full hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 aria-label="User menu"
               >
-                <span className="hidden md:block mr-2">{userFullName}</span>
+                <span className="hidden md:flex md:flex-col md:items-end mr-2">
+                  <span className="font-medium">{userFullName}</span>
+                  <span className="text-xs text-gray-500">{roleDisplay}</span>
+                </span>
                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
                   {userInitials}
                 </div>

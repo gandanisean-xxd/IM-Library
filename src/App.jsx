@@ -27,7 +27,7 @@ function App() {
           <Route path="/auth/:role" element={<AuthLayout />} />
           
           {/* Admin routes for staff role */}
-          <Route element={<RequireAuth allowedRoles={['staff']} />}>
+          <Route element={<RequireAuth allowedRoles={['staff', 'librarian']} />}>
             <Route path="/admin" element={<DashboardLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />

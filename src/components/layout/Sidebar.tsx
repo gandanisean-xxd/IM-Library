@@ -26,6 +26,42 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
   const isAdmin = user?.role === 'staff';
   const isLibrarian = user?.role === 'librarian';
   const isStaff = isAdmin || isLibrarian;
+
+  const userInitials = React.useMemo(() => {
+    if (!user) return '';
+    
+    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
+      return `${user.LIBRARIAN_FIRSTNAME.charAt(0)}${user.LIBRARIAN_LASTNAME.charAt(0)}`;
+    }
+    
+    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
+      return `${user.STUDENT_FIRSTNAME.charAt(0)}${user.STUDENT_LASTNAME.charAt(0)}`;
+    }
+    
+    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
+      return `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`;
+    }
+
+    return '';
+  }, [user]);
+
+  const userFullName = React.useMemo(() => {
+    if (!user) return '';
+    
+    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
+      return `${user.LIBRARIAN_FIRSTNAME} ${user.LIBRARIAN_LASTNAME}`;
+    }
+    
+    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
+      return `${user.STUDENT_FIRSTNAME} ${user.STUDENT_LASTNAME}`;
+    }
+    
+    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
+      return `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`;
+    }
+    
+    return '';
+  }, [user]);
   
   const navLinks = [
     {
@@ -114,13 +150,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
         <div className="px-4 py-6 border-b border-gray-800">
         <div className="flex items-center">
           <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-            {user?.STUDENT_FIRSTNAME?.charAt(0) || user?.FACULTY_FIRSTNAME?.charAt(0)}
-            {user?.STUDENT_LASTNAME?.charAt(0) || user?.FACULTY_LASTNAME?.charAt(0)}
+            {userInitials}
           </div>
           <div className="ml-3">
             <p className="text-sm font-medium text-white">
-              {user?.STUDENT_FIRSTNAME || user?.FACULTY_FIRSTNAME}{' '}
-              {user?.STUDENT_LASTNAME || user?.FACULTY_LASTNAME}
+              {userFullName}
             </p>
             <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
           </div>
