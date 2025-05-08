@@ -7,6 +7,8 @@ interface User {
   STUDENT_LASTNAME?: string;
   FACULTY_FIRSTNAME?: string;
   FACULTY_LASTNAME?: string;
+  LIBRARIAN_FIRSTNAME?: string;
+  LIBRARIAN_LASTNAME?: string;
   EMAIL: string;
   role: string;
 }
@@ -41,16 +43,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return savedUser ? JSON.parse(savedUser).role : null;
   });
 
+  // Update the login function in AuthContext.tsx
   const login = (data: AuthData) => {
-    setUser(data.user);
-    setToken(data.token);
-    setRole(data.role);
-    // Optionally save to localStorage
-    localStorage.setItem('user', JSON.stringify(data.user));
-    if (data.token) {
-      localStorage.setItem('token', data.token);
+    try {
+        if (!data || !data.user) {
+            throw new Error('Invalid login data received');
+        }
+
+        if (!data.role) {
+            throw new Error('No role received from server');
+        }
+
+        const userRole = data.role.toLowerCase();
+        
+        // Create user object with explicit role
+        const updatedUser = {
+            ...data.user,
+            role: userRole
+        };
+
+        setUser(updatedUser);
+        setToken(data.token);
+        setRole(userRole);
+        
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (data.token) {
+            localStorage.setItem('token', data.token);
+        }
+
+    } catch (error) {
+        console.error('Login error:', error);
+        throw error;
     }
-  };
+};
 
   const logout = () => {
     setUser(null);

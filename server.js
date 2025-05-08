@@ -197,14 +197,18 @@ app.post('/api/register/faculty', async (req, res) => {
 app.post('/api/login/:role', async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
 
-    const { role } = req.params;
+    let { role } = req.params; // Get the role from the URL
     const { email, password } = req.body;
     let connection;
 
     console.log('Login attempt:', { role, email }); // Debug log
 
     try {
-        
+        // Map 'staff' to 'librarian' in the backend
+        let mappedRole = role;
+        if (role === 'staff') {
+            mappedRole = 'librarian';
+        }
 
         // Validate input
         if (!email || !password) {
@@ -221,12 +225,18 @@ app.post('/api/login/:role', async (req, res) => {
         });
 
         let tableName;
-        switch (role) {
+        switch (mappedRole) {
             case 'student':
                 tableName = 'STUDENT';
                 break;
             case 'faculty':
                 tableName = 'FACULTY';
+                break;
+            case 'librarian':
+                tableName = 'LIBRARIAN';
+                break;
+            case 'admin':
+                tableName = 'ADMIN';
                 break;
             default:
                 return res.status(400).json({
@@ -237,7 +247,7 @@ app.post('/api/login/:role', async (req, res) => {
 
         console.log('Executing query for:', { email, tableName }); // Debug log
 
-         const result = await connection.execute(
+        const result = await connection.execute(
             `SELECT * FROM ${tableName} WHERE UPPER(EMAIL) = UPPER(:1) AND PASSWORD = :2 AND STATUS = 'active'`,
             [email, password],
             { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -246,17 +256,32 @@ app.post('/api/login/:role', async (req, res) => {
         if (result.rows && result.rows.length > 0) {
             const user = result.rows[0];
             delete user.PASSWORD;
-    
-            // Generate token
+
+            // Use the mapped role
+            user.role = mappedRole;
+
             const token = Buffer.from(`${user.EMAIL}:${Date.now()}`).toString('base64');
-            
+
             return res.status(200).json({
                 success: true,
                 message: 'Login successful',
                 user: user,
-                token: token // Make sure token is included
+                token: token,
+                role: mappedRole // Explicitly include the role in response
+            });
+        } else {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid email or password'
             });
         }
+    } catch (err) {
+        console.error('Database error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Login failed',
+            error: err.message
+        });
     } finally {
         if (connection) {
             try {

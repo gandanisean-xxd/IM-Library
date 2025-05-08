@@ -10,55 +10,71 @@ const AuthLayout: React.FC = () => {
 
   const getRoleDisplayName = () => {
     switch (role) {
-      case 'student':
-        return 'Student';
-      case 'faculty':
-        return 'Faculty';
-      case 'staff':
-        return 'Staff';
-      default:
-        return 'User';
+        case 'student':
+            return 'Student';
+        case 'faculty':
+            return 'Faculty';
+        case 'staff':
+            return 'Staff';
+        case 'librarian':
+            return 'Librarian';
+        case 'admin':
+            return 'Admin';
+        default:
+            return 'User';
     }
-  };
+};
 
-  const getHeaderColor = () => {
+const getHeaderColor = () => {
     switch (role) {
-      case 'student':
-        return 'bg-blue-600';
-      case 'faculty':
-        return 'bg-amber-600';
-      case 'staff':
-        return 'bg-emerald-600';
-      default:
-        return 'bg-gray-800';
+        case 'student':
+            return 'bg-blue-600';
+        case 'faculty':
+            return 'bg-amber-600';
+        case 'staff':
+            return 'bg-emerald-600';
+        case 'librarian':
+            return 'bg-purple-600';
+        case 'admin':
+            return 'bg-red-600';
+        default:
+            return 'bg-gray-800';
     }
-  };
+};
 
-  const getPrimaryColor = () => {
+const getPrimaryColor = () => {
     switch (role) {
-      case 'student':
-        return 'text-blue-600 border-blue-600';
-      case 'faculty':
-        return 'text-amber-600 border-amber-600';
-      case 'staff':
-        return 'text-emerald-600 border-emerald-600';
-      default:
-        return 'text-gray-800 border-gray-800';
+        case 'student':
+            return 'text-blue-600 border-blue-600';
+        case 'faculty':
+            return 'text-amber-600 border-amber-600';
+        case 'staff':
+            return 'text-emerald-600 border-emerald-600';
+        case 'librarian':
+            return 'text-purple-600 border-purple-600';
+        case 'admin':
+            return 'text-red-600 border-red-600';
+        default:
+            return 'text-gray-800 border-gray-800';
     }
-  };
+};
 
-  const getButtonColor = () => {
+const getButtonColor = () => {
     switch (role) {
-      case 'student':
-        return 'bg-blue-600 hover:bg-blue-700';
-      case 'faculty':
-        return 'bg-amber-600 hover:bg-amber-700';
-      case 'staff':
-        return 'bg-emerald-600 hover:bg-emerald-700';
-      default:
-        return 'bg-gray-800 hover:bg-gray-900';
+        case 'student':
+            return 'bg-blue-600 hover:bg-blue-700';
+        case 'faculty':
+            return 'bg-amber-600 hover:bg-amber-700';
+        case 'staff':
+            return 'bg-emerald-600 hover:bg-emerald-700';
+        case 'librarian':
+            return 'bg-purple-600 hover:bg-purple-700';
+        case 'admin':
+            return 'bg-red-600 hover:bg-red-700';
+        default:
+            return 'bg-gray-800 hover:bg-gray-900';
     }
-  };
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-4">

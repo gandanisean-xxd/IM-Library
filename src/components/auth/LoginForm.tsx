@@ -21,46 +21,52 @@ const LoginForm: React.FC<LoginFormProps> = ({ role, buttonColorClass }) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-    
-    try {
-        console.log('Sending login request:', { email, role }); // Debug log
 
-        const response = await fetch(`http://localhost:5000/api/login/${role}`, {
+    try {
+        let mappedRole = role;
+        if (role === 'staff') {
+            mappedRole = 'librarian';
+        }
+
+        console.log('Sending login request:', { email, role: mappedRole });
+
+        const response = await fetch(`http://localhost:5000/api/login/${mappedRole}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 email: email.trim(),
-                password: password
+                password: password,
+                role: mappedRole
             })
         });
 
         const data = await response.json();
-        console.log('Login response:', data); // Debug log
+        console.log('Login response:', data);
 
         if (response.ok && data.success) {
-            // Create login data with token
             const loginData = {
                 user: {
                     ...data.user,
-                    role: role
+                    role: mappedRole
                 },
-                token: data.token, // Don't use || null here
-                role: role
+                token: data.token,
+                role: mappedRole
             };
-
-            console.log('Login data:', loginData); // Debug log
             
-            // Store user data in context
+            // Remove await since login doesn't return a Promise
             login(loginData);
 
             // Navigate based on role
-            if (role === 'staff') {
-                navigate('/admin/dashboard', { replace: true });
-            } else {
-                navigate('/user/dashboard', { replace: true });
-            }
+            switch (mappedRole) {
+              case 'admin':
+              case 'librarian':
+                  navigate('/admin/dashboard', { replace: true });
+                  break;
+              default:
+                  navigate('/user/dashboard', { replace: true });
+          }
         } else {
             setError(data.message || 'Invalid email or password');
         }
