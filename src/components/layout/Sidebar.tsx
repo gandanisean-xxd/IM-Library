@@ -20,10 +20,11 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
   const location = useLocation();
-  const { currentUser, logout } = useAuth();
+  const { user, logout } = useAuth();  // Change this line to get user instead of currentUser
   
-  const isAdmin = currentUser?.role === 'admin';
-  const isLibrarian = currentUser?.role === 'librarian';
+  // Update role checks to use user.role
+  const isAdmin = user?.role === 'staff';
+  const isLibrarian = user?.role === 'librarian';
   const isStaff = isAdmin || isLibrarian;
   
   const navLinks = [
@@ -90,10 +91,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
   ];
 
   return (
-    <div 
-      className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}
+    <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out md:translate-x-0 ${
+      isOpen ? 'translate-x-0' : '-translate-x-full'
+    }`}
     >
       <div className="flex flex-col h-full">
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
@@ -112,16 +112,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
         </div>
         
         <div className="px-4 py-6 border-b border-gray-800">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-              {currentUser?.firstName?.charAt(0)}{currentUser?.lastName?.charAt(0)}
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-white">{currentUser?.firstName} {currentUser?.lastName}</p>
-              <p className="text-xs text-gray-400 capitalize">{currentUser?.role}</p>
-            </div>
+        <div className="flex items-center">
+          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+            {user?.STUDENT_FIRSTNAME?.charAt(0) || user?.FACULTY_FIRSTNAME?.charAt(0)}
+            {user?.STUDENT_LASTNAME?.charAt(0) || user?.FACULTY_LASTNAME?.charAt(0)}
+          </div>
+          <div className="ml-3">
+            <p className="text-sm font-medium text-white">
+              {user?.STUDENT_FIRSTNAME || user?.FACULTY_FIRSTNAME}{' '}
+              {user?.STUDENT_LASTNAME || user?.FACULTY_LASTNAME}
+            </p>
+            <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
           </div>
         </div>
+      </div>
         
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="px-2 space-y-1">

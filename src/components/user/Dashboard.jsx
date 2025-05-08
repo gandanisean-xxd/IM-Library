@@ -4,10 +4,25 @@ import { books, borrowings } from '../../mockData';
 import { useAuth } from '../../context/AuthContext';
 
 const UserDashboard = () => {
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
+
+  const userFullName = user ? (
+    user.STUDENT_FIRSTNAME ? 
+    `${user.STUDENT_FIRSTNAME} ${user.STUDENT_LASTNAME}` : 
+    `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`
+  ) : '';
+
+  // Get user initials
+  const userInitials = user ? (
+    user.STUDENT_FIRSTNAME ? 
+      `${user.STUDENT_FIRSTNAME.charAt(0)}${user.STUDENT_LASTNAME.charAt(0)}` : 
+      `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`
+  ) : '';
   
   // Filter borrowings for the current user
-  const userBorrowings = borrowings.filter(borrowing => borrowing.userId === currentUser?.id);
+  const userBorrowings = borrowings.filter(borrowing => 
+    borrowing.userId === (user?.STUDENT_ID || user?.FACULTY_ID)
+  );
   
   // Count by status
   const borrowed = userBorrowings.filter(b => b.status === 'borrowed').length;
@@ -79,8 +94,10 @@ const UserDashboard = () => {
     <div className="space-y-6">
       {/* Greeting section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-6 text-white shadow-lg">
-        <h1 className="text-3xl font-bold mb-2">{greeting}, {currentUser?.firstName}!</h1>
-        <p className="opacity-90">Welcome to your library dashboard</p>
+      <h1 className="text-3xl font-bold mb-2">
+          {greeting}, {userFullName}!
+        </h1>
+        <p className="opacity-90">Welcome to your library dashboard!</p>
       </div>
       
       {/* Statistics cards */}
@@ -93,7 +110,9 @@ const UserDashboard = () => {
             </div>
           </div>
           <p className="text-3xl font-bold text-gray-800">{borrowed}</p>
-          <p className="text-sm text-gray-500 mt-2">Books currently in your possession</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {user?.role === 'student' ? 'Books currently borrowed' : 'Materials in possession'}
+          </p>
         </div>
         
         <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
