@@ -9,6 +9,31 @@ interface SignupFormProps {
   buttonColorClass: string;
 }
 
+const validatePassword = (password: string): { isValid: boolean; errors: string[] } => {
+  const errors: string[] = [];
+  
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push('Password must contain at least one uppercase letter');
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push('Password must contain at least one lowercase letter');
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push('Password must contain at least one number');
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push('Password must contain at least one special character');
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors
+  };
+};
+
 const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
   const navigate = useNavigate();
   
@@ -27,6 +52,19 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     student_campus: '',
   });
   
+  const [passwordValidation, setPasswordValidation] = useState({
+  hasLength: false,
+  hasUpperCase: false,
+  hasLowerCase: false,
+  hasNumber: false,
+  hasSpecial: false
+ });
+
+ const [isEmailVerified, setIsEmailVerified] = useState(false);
+const [otp, setOtp] = useState('');
+const [showOtpInput, setShowOtpInput] = useState(false);
+const [sentEmail, setSentEmail] = useState('');
+
   const [error, setError] = useState('');
   
   const calculateExpectedYearOfGraduate = (studentId: string, program: string): string => {
@@ -38,20 +76,109 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     return (enrollmentYear + duration).toString();
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => {
-      const updatedFormData = { ...prev, [name]: value };
-      if (name === 'studentId' || name === 'program') {
-        updatedFormData.expectedYearOfGraduate = calculateExpectedYearOfGraduate(updatedFormData.studentId, updatedFormData.program);
-      }
-      return updatedFormData;
+  const sendOTP = async (email: string) => {
+  try {
+    const response = await fetch('http://localhost:5000/api/send-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email })
     });
-  };
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      setShowOtpInput(true);
+      setSentEmail(email);
+      setError('');
+      alert('OTP has been sent to your email');
+    } else {
+      setError(data.message || 'Failed to send OTP');
+    }
+  } catch (error) {
+    console.error('Error sending OTP:', error);
+    setError('Failed to send OTP. Please try again.');
+  }
+};
+
+const verifyOTP = async () => {
+  try {
+    const response = await fetch('http://localhost:5000/api/verify-otp', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        email: sentEmail,
+        otp: otp 
+      })
+    });
+
+    const data = await response.json();
+    
+    if (response.ok) {
+      setIsEmailVerified(true);
+      setShowOtpInput(false);
+      setError('');
+      alert('Email verified successfully!');
+    } else {
+      setError(data.message || 'Invalid OTP');
+    }
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    setError('Failed to verify OTP. Please try again.');
+  }
+};
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = e.target;
+  setFormData(prev => {
+    const updatedFormData = { ...prev, [name]: value };
+    
+    // Check password requirements in real-time
+    if (name === 'password') {
+      setPasswordValidation({
+        hasLength: value.length >= 8,
+        hasUpperCase: /[A-Z]/.test(value),
+        hasLowerCase: /[a-z]/.test(value),
+        hasNumber: /[0-9]/.test(value),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(value)
+      });
+      
+      const { errors } = validatePassword(value);
+      setError(errors.join('\n'));
+    }
+    
+    // Clear error when password confirmation matches
+    if (name === 'confirmPassword' && value === formData.password) {
+      setError('');
+    }
+    
+    if (name === 'studentId' || name === 'program') {
+      updatedFormData.expectedYearOfGraduate = calculateExpectedYearOfGraduate(
+        updatedFormData.studentId, 
+        updatedFormData.program
+      );
+    }
+    return updatedFormData;
+  });
+};
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!isEmailVerified) {
+    setError('Please verify your email first');
+    return;
+  }
+
+    const { isValid, errors } = validatePassword(formData.password);
+    if (!isValid) {
+    setError(errors.join('\n'));
+    return;
+  }
     
     // Validation
     if (formData.password !== formData.confirmPassword) {
@@ -331,34 +458,105 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
       )}
       
       <div className="mb-4">
-        <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
-          Email
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-      </div>
+  <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+    Email
+  </label>
+  <div className="flex gap-2">
+    <input
+      id="email"
+      name="email"
+      type="email"
+      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+      value={formData.email}
+      onChange={handleChange}
+      required
+      disabled={isEmailVerified}
+    />
+    {!isEmailVerified && !showOtpInput && (
+      <button
+        type="button"
+        onClick={() => sendOTP(formData.email)}
+        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        disabled={!formData.email}
+      >
+        Verify Email
+      </button>
+    )}
+  </div>
+</div>
+
+{showOtpInput && (
+  <div className="mb-4">
+    <label htmlFor="otp" className="block text-gray-700 font-medium mb-2">
+      Enter OTP
+    </label>
+    <div className="flex gap-2">
+      <input
+        id="otp"
+        type="text"
+        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={otp}
+        onChange={(e) => setOtp(e.target.value)}
+        placeholder="Enter OTP sent to your email"
+        required
+      />
+      <button
+        type="button"
+        onClick={verifyOTP}
+        className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+      >
+        Verify OTP
+      </button>
+    </div>
+  </div>
+)}
+
+{isEmailVerified && (
+  <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-md">
+    Email verified successfully!
+  </div>
+)}
       
-      <div className="mb-4">
-        <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
-          Password
-        </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-      </div>
+    
+  <div className="mb-4">
+  <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+    Password
+  </label>
+  <input
+    id="password"
+    name="password"
+    type="password"
+    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    value={formData.password}
+    onChange={handleChange}
+    required
+  />
+  <div className="mt-1 text-sm">
+    Password must contain at least:
+    <ul className="list-disc list-inside space-y-1 mt-1">
+      <li className={`flex items-center ${passwordValidation.hasLength ? 'text-green-600' : 'text-gray-500'}`}>
+        <span>{passwordValidation.hasLength ? '✓' : '•'}</span>
+        <span className="ml-2">8 characters</span>
+      </li>
+      <li className={`flex items-center ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+        <span>{passwordValidation.hasUpperCase ? '✓' : '•'}</span>
+        <span className="ml-2">One uppercase letter</span>
+      </li>
+      <li className={`flex items-center ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+        <span>{passwordValidation.hasLowerCase ? '✓' : '•'}</span>
+        <span className="ml-2">One lowercase letter</span>
+      </li>
+      <li className={`flex items-center ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+        <span>{passwordValidation.hasNumber ? '✓' : '•'}</span>
+        <span className="ml-2">One number</span>
+      </li>
+      <li className={`flex items-center ${passwordValidation.hasSpecial ? 'text-green-600' : 'text-gray-500'}`}>
+        <span>{passwordValidation.hasSpecial ? '✓' : '•'}</span>
+        <span className="ml-2">One special character (!@#$%^&*(),.?":{}|)</span>
+        </li>
+      </ul>
+    </div>
+  </div>
       
       <div className="mb-6">
         <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">

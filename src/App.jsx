@@ -27,10 +27,10 @@ function App() {
           <Route path="/auth/:role" element={<AuthLayout />} />
           
           {/* Admin routes for staff role */}
-          <Route element={<RequireAuth allowedRoles={['staff', 'librarian']} />}>
+          <Route element={<RequireAuth allowedRoles={['admin', 'staff', 'librarian']} />}>
             <Route path="/admin" element={<DashboardLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="books" element={<BooksList />} />
               <Route path="students" element={<StudentsList />} />
               <Route path="faculty" element={<FacultyList />} />
