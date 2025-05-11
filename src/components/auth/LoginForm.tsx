@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { users } from '../../mockData'; // Add this import
 
 interface LoginFormProps {
   role: string;
@@ -23,56 +24,80 @@ const LoginForm: React.FC<LoginFormProps> = ({ role, buttonColorClass }) => {
     setIsLoading(true);
 
     try {
-        let mappedRole = role;
-        if (role === 'staff') {
-            mappedRole = 'librarian';
+        // Map staff role to librarian for mock data check
+        let mappedRole = role === 'staff' ? 'librarian' : role;
+
+        // Check against mock data first
+        const user = users.find(u => 
+            u.email === email.trim() && 
+            u.password === password &&
+            (u.role === mappedRole || (mappedRole === 'librarian' && u.role === 'admin'))
+        );
+
+        if (user) {
+            // Mock successful login
+            const loginData = {
+                user: {
+                    ...user,
+                    role: role // Use original role instead of mapped role
+                },
+                token: btoa(`${user.email}:${Date.now()}`),
+                role: role // Use original role for consistency
+            };
+
+            login(loginData);
+
+            // Navigate based on original role
+            switch (role) {
+                case 'admin':
+                case 'staff':
+                case 'librarian':
+                    navigate('/admin/dashboard', { replace: true });
+                    break;
+                default:
+                    navigate('/user/dashboard', { replace: true });
+            }
+            return;
         }
 
-        console.log('Sending login request:', { email, role: mappedRole });
-
-        const response = await fetch(`http://localhost:5000/api/login/${mappedRole}`, {
+        // If no mock user found, try the API
+        const response = await fetch(`http://localhost:5000/api/login/${role}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 email: email.trim(),
-                password: password,
-                role: mappedRole
+                password: password
             })
         });
 
         const data = await response.json();
-        console.log('Login response:', data);
 
         if (response.ok && data.success) {
-            const loginData = {
-                user: {
-                    ...data.user,
-                    role: mappedRole
-                },
+            login({
+                user: data.user,
                 token: data.token,
-                role: mappedRole
-            };
-            
-            // Remove await since login doesn't return a Promise
-            login(loginData);
+                role: role
+            });
 
-            // Navigate based on role
-            switch (mappedRole) {
-              case 'admin':
-              case 'librarian':
-                  navigate('/admin/dashboard', { replace: true });
-                  break;
-              default:
-                  navigate('/user/dashboard', { replace: true });
-          }
+            switch (role) {
+                case 'admin':
+                case 'staff':
+                case 'librarian':
+                    navigate('/admin/dashboard', { replace: true });
+                    break;
+                default:
+                    navigate('/user/dashboard', { replace: true });
+            }
         } else {
             setError(data.message || 'Invalid email or password');
         }
     } catch (error) {
         console.error('Login error:', error);
-        setError('Server connection failed. Please try again later.');
+        setError(error instanceof Error ? 
+            error.message : 
+            'Server connection failed. Please try again later.');
     } finally {
         setIsLoading(false);
     }

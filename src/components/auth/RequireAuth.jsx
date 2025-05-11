@@ -14,11 +14,14 @@ const RequireAuth = ({ allowedRoles }) => {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  // Map staff role to librarian for permission checking
+  const effectiveRole = role === 'staff' ? 'librarian' : role;
+
   // Check if user has allowed role
-  if (!allowedRoles.includes(role)) {
+  if (!allowedRoles.includes(effectiveRole)) {
     console.log('User role not allowed:', role);
     return <Navigate to="/" replace />;
-}
+  }
 
   console.log('Auth successful, rendering outlet');
   return <Outlet />;
