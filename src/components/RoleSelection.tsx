@@ -58,12 +58,21 @@ const RoleSelection: React.FC = () => {
 
         <div className="mt-10 text-center">
           <p className="text-gray-600">Are you a librarian or administrator?</p>
-          <Link 
-            to="/auth/staff" 
-            className="inline-block mt-2 text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-300"
-          >
-            Staff Login
-          </Link>
+          <div className="flex justify-center gap-4 mt-2">
+            <Link 
+              to="/auth/librarian" 
+              className="text-purple-600 hover:text-purple-800 font-semibold transition-colors duration-300"
+            >
+              Librarian Login
+            </Link>
+            <span className="text-gray-400">|</span>
+            <Link 
+              to="/auth/admin" 
+              className="text-red-600 hover:text-red-800 font-semibold transition-colors duration-300"
+            >
+              Admin Login
+            </Link>
+          </div>
         </div>
       </div>
     </div>

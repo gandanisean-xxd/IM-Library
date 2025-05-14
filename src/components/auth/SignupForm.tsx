@@ -45,11 +45,14 @@ const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
     confirmPassword: '',
     studentId: '',
     facultyId: '',
+    librarianId: '',
     program: '',
     department: '',
     expectedYearOfGraduate: '',
     status: 'active',
     student_campus: '',
+    librarian_category: '',
+    librarian_campus: '',
   });
   
   const [passwordValidation, setPasswordValidation] = useState({
@@ -301,11 +304,69 @@ const verifyOTP = async () => {
         console.error('Registration error:', error);
         setError('Server connection failed. Please try again later.');
       }
+    } else if (role === 'librarian') {
+      if (!formData.librarianId || !formData.librarian_category || !formData.librarian_campus) {
+        setError('Please fill in all required fields');
+        return;
+      }
+
+      if (formData.librarianId.length > 50) {
+        setError('Librarian ID must not exceed 50 characters');
+        return;
+      }
+
+      const librarianData = {
+        librarian_id: formData.librarianId,
+        librarian_lastname: formData.lastName,
+        librarian_firstname: formData.firstName,
+        email: formData.email,
+        password: formData.password,
+        librarian_category: formData.librarian_category,
+        librarian_campus: formData.librarian_campus,
+        status: formData.status
+      };
+
+      try {
+        console.log('Sending librarian data:', librarianData);
+        
+        const response = await fetch('http://localhost:5000/api/register/librarian', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(librarianData)
+        });
+
+        const responseData = await response.json();
+        console.log('Server response:', responseData);
+
+        if (response.ok) {
+          alert('Registration successful! Please login to continue.');
+          navigate('/auth/librarian');
+        } else {
+          setError(responseData.message || 'Registration failed');
+        }
+      } catch (error) {
+        console.error('Registration error:', error);
+        setError('Server connection failed. Please try again later.');
+      }
     }
   };
   
+  // Add librarian categories and campuses
+  const librarianCategories = [
+    'Student Staff',
+    'Staff'
+  ];
+
+  const campuses = [
+    'San Bartolome Campus',
+    'Batasan Campus',
+    'San Francisco Campus'
+  ];
+
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="px-6 pb-6">
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
           {error}
@@ -457,107 +518,167 @@ const verifyOTP = async () => {
         </div>
       )}
       
+      {role === 'librarian' && (
+        <>
+          <div className="mb-4">
+            <label htmlFor="librarianId" className="block text-gray-700 font-medium mb-2">
+              Librarian ID
+            </label>
+            <input
+              id="librarianId"
+              name="librarianId"
+              type="text"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.librarianId}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="librarian_category" className="block text-gray-700 font-medium mb-2">
+              Category
+            </label>
+            <select
+              id="librarian_category"
+              name="librarian_category"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.librarian_category}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a category</option>
+              {librarianCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="librarian_campus" className="block text-gray-700 font-medium mb-2">
+              Campus
+            </label>
+            <select
+              id="librarian_campus"
+              name="librarian_campus"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={formData.librarian_campus}
+              onChange={handleChange}
+              required
+            >
+              <option value="">Select a campus</option>
+              {campuses.map((campus) => (
+                <option key={campus} value={campus}>
+                  {campus}
+                </option>
+              ))}
+            </select>
+          </div>
+        </>
+      )}
+      
       <div className="mb-4">
-  <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
-    Email
-  </label>
-  <div className="flex gap-2">
-    <input
-      id="email"
-      name="email"
-      type="email"
-      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-      value={formData.email}
-      onChange={handleChange}
-      required
-      disabled={isEmailVerified}
-    />
-    {!isEmailVerified && !showOtpInput && (
-      <button
-        type="button"
-        onClick={() => sendOTP(formData.email)}
-        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        disabled={!formData.email}
-      >
-        Verify Email
-      </button>
-    )}
-  </div>
-</div>
+        <label htmlFor="email" className="block text-gray-700 font-medium mb-2">
+          Email
+        </label>
+        <div className="flex gap-2">
+          <input
+            id="email"
+            name="email"
+            type="email"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={formData.email}
+            onChange={handleChange}
+            required
+            disabled={isEmailVerified}
+          />
+          {!isEmailVerified && !showOtpInput && (
+            <button
+              type="button"
+              onClick={() => sendOTP(formData.email)}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              disabled={!formData.email}
+            >
+              Verify Email
+            </button>
+          )}
+        </div>
+      </div>
 
-{showOtpInput && (
-  <div className="mb-4">
-    <label htmlFor="otp" className="block text-gray-700 font-medium mb-2">
-      Enter OTP
-    </label>
-    <div className="flex gap-2">
-      <input
-        id="otp"
-        type="text"
-        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        value={otp}
-        onChange={(e) => setOtp(e.target.value)}
-        placeholder="Enter OTP sent to your email"
-        required
-      />
-      <button
-        type="button"
-        onClick={verifyOTP}
-        className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-      >
-        Verify OTP
-      </button>
-    </div>
-  </div>
-)}
+      {showOtpInput && (
+        <div className="mb-4">
+          <label htmlFor="otp" className="block text-gray-700 font-medium mb-2">
+            Enter OTP
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="otp"
+              type="text"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              placeholder="Enter OTP sent to your email"
+              required
+            />
+            <button
+              type="button"
+              onClick={verifyOTP}
+              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+            >
+              Verify OTP
+            </button>
+          </div>
+        </div>
+      )}
 
-{isEmailVerified && (
-  <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-md">
-    Email verified successfully!
-  </div>
-)}
+      {isEmailVerified && (
+        <div className="mb-4 p-2 bg-green-100 text-green-700 rounded-md">
+          Email verified successfully!
+        </div>
+      )}
       
-    
-  <div className="mb-4">
-  <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
-    Password
-  </label>
-  <input
-    id="password"
-    name="password"
-    type="password"
-    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-    value={formData.password}
-    onChange={handleChange}
-    required
-  />
-  <div className="mt-1 text-sm">
-    Password must contain at least:
-    <ul className="list-disc list-inside space-y-1 mt-1">
-      <li className={`flex items-center ${passwordValidation.hasLength ? 'text-green-600' : 'text-gray-500'}`}>
-        <span>{passwordValidation.hasLength ? '✓' : '•'}</span>
-        <span className="ml-2">8 characters</span>
-      </li>
-      <li className={`flex items-center ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
-        <span>{passwordValidation.hasUpperCase ? '✓' : '•'}</span>
-        <span className="ml-2">One uppercase letter</span>
-      </li>
-      <li className={`flex items-center ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
-        <span>{passwordValidation.hasLowerCase ? '✓' : '•'}</span>
-        <span className="ml-2">One lowercase letter</span>
-      </li>
-      <li className={`flex items-center ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
-        <span>{passwordValidation.hasNumber ? '✓' : '•'}</span>
-        <span className="ml-2">One number</span>
-      </li>
-      <li className={`flex items-center ${passwordValidation.hasSpecial ? 'text-green-600' : 'text-gray-500'}`}>
-        <span>{passwordValidation.hasSpecial ? '✓' : '•'}</span>
-        <span className="ml-2">One special character (!@#$%^&*(),.?":{}|)</span>
-        </li>
-      </ul>
-    </div>
-  </div>
-      
+      <div className="mb-4">
+        <label htmlFor="password" className="block text-gray-700 font-medium mb-2">
+          Password
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          value={formData.password}
+          onChange={handleChange}
+          required
+        />
+        <div className="mt-1 text-sm">
+          Password must contain at least:
+          <ul className="list-disc list-inside space-y-1 mt-1">
+            <li className={`flex items-center ${passwordValidation.hasLength ? 'text-green-600' : 'text-gray-500'}`}>
+              <span>{passwordValidation.hasLength ? '✓' : '•'}</span>
+              <span className="ml-2">8 characters</span>
+            </li>
+            <li className={`flex items-center ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-gray-500'}`}>
+              <span>{passwordValidation.hasUpperCase ? '✓' : '•'}</span>
+              <span className="ml-2">One uppercase letter</span>
+            </li>
+            <li className={`flex items-center ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-gray-500'}`}>
+              <span>{passwordValidation.hasLowerCase ? '✓' : '•'}</span>
+              <span className="ml-2">One lowercase letter</span>
+            </li>
+            <li className={`flex items-center ${passwordValidation.hasNumber ? 'text-green-600' : 'text-gray-500'}`}>
+              <span>{passwordValidation.hasNumber ? '✓' : '•'}</span>
+              <span className="ml-2">One number</span>
+            </li>
+            <li className={`flex items-center ${passwordValidation.hasSpecial ? 'text-green-600' : 'text-gray-500'}`}>
+              <span>{passwordValidation.hasSpecial ? '✓' : '•'}</span>
+              <span className="ml-2">One special character (!@#$%^&*(),.?":{}|)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
       <div className="mb-6">
         <label htmlFor="confirmPassword" className="block text-gray-700 font-medium mb-2">
           Confirm Password
@@ -572,10 +693,11 @@ const verifyOTP = async () => {
           required
         />
       </div>
-      
+
       <button
         type="submit"
         className={`${buttonColorClass} text-white font-semibold py-2 px-4 rounded-md transition-colors duration-300 w-full`}
+        disabled={!isEmailVerified}
       >
         Sign Up
       </button>

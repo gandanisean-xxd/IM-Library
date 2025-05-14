@@ -11,82 +11,62 @@ interface User {
   LIBRARIAN_LASTNAME?: string;
   EMAIL: string;
   role: string;
-}
-
-interface AuthData {
-  user: User;
-  token: string | null;
-  role: string;
+  STUDENT_PROGRAM?: string;
+  STUDENT_CAMPUS?: string;
+  EXPECTED_GRADUATEYEAR?: string;
+  STATUS?: string;
 }
 
 interface AuthContextType {
-  user: User | null;
+  currentUser: User | null;
   token: string | null;
-  role: string | null;
-  login: (data: AuthData) => void;
+  login: (data: { user: User; token: string; role: string }) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem('token');
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
 
-  const [role, setRole] = useState<string | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser).role : null;
-  });
-
-  // Update the login function in AuthContext.tsx
-  const login = (data: AuthData) => {
-    try {
-        if (!data || !data.user) {
-            throw new Error('Invalid login data received');
-        }
-
-        if (!data.role) {
-            throw new Error('No role received from server');
-        }
-
-        const userRole = data.role.toLowerCase();
-        
-        // Create user object with explicit role
-        const updatedUser = {
-            ...data.user,
-            role: userRole
-        };
-
-        setUser(updatedUser);
-        setToken(data.token);
-        setRole(userRole);
-        
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        if (data.token) {
-            localStorage.setItem('token', data.token);
-        }
-
-    } catch (error) {
-        console.error('Login error:', error);
-        throw error;
-    }
-};
+  const login = (data: { user: User; token: string; role: string }) => {
+    setCurrentUser(data.user);
+    setToken(data.token);
+    // Store auth data in localStorage
+    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.token);
+  };
 
   const logout = () => {
-    setUser(null);
+    setCurrentUser(null);
     setToken(null);
-    setRole(null);
+    // Clear auth data from localStorage
     localStorage.removeItem('user');
     localStorage.removeItem('token');
   };
 
+  const updateUser = (user: User) => {
+    setCurrentUser(user);
+    // Update user data in localStorage while preserving the existing token
+    localStorage.setItem('user', JSON.stringify(user));
+    // Don't modify the token - keep the existing one
+  };
+
+  // Check for existing auth data on mount
+  React.useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
+      setCurrentUser(JSON.parse(storedUser));
+      setToken(storedToken);
+    }
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ user, token, role, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, token, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -99,3 +79,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+export default AuthContext;

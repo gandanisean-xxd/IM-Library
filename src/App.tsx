@@ -17,6 +17,15 @@ import Settings from './components/shared/Settings';
 import RequireAuth from './components/auth/RequireAuth';
 import NotFound from './components/shared/NotFound';
 
+// Import librarian components
+import LibrarianDashboard from './components/librarian/Dashboard';
+import BorrowVerificationForm from './components/librarian/BorrowVerificationForm';
+import PendingPickupsList from './components/librarian/PendingPickupsList';
+import FineManagement from './components/librarian/FineManagement';
+import Reports from './components/librarian/Reports';
+import NotificationCenter from './components/librarian/NotificationCenter';
+import OverdueBooksList from './components/librarian/OverdueBooksList';
+
 function App() {
   return (
     <AuthProvider>
@@ -27,7 +36,7 @@ function App() {
           <Route path="/auth/:role" element={<AuthLayout />} />
           
           {/* Admin routes */}
-          <Route element={<RequireAuth allowedRoles={['admin', 'librarian']} />}>
+          <Route element={<RequireAuth allowedRoles={['admin']} />}>
             <Route path="/admin" element={<DashboardLayout />}>
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
@@ -36,6 +45,21 @@ function App() {
               <Route path="faculty" element={<FacultyList />} />
               <Route path="librarians" element={<LibrariansList />} />
               <Route path="borrowings" element={<BorrowingsList />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
+          </Route>
+
+          {/* Librarian routes */}
+          <Route element={<RequireAuth allowedRoles={['librarian', 'staff']} />}>
+            <Route path="/librarian" element={<DashboardLayout />}>
+              <Route index element={<Navigate to="/librarian/dashboard" replace />} />
+              <Route path="dashboard" element={<LibrarianDashboard />} />
+              <Route path="borrow-verification" element={<BorrowVerificationForm />} />
+              <Route path="pending-pickups" element={<PendingPickupsList />} />
+              <Route path="fines" element={<FineManagement />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="notifications" element={<NotificationCenter />} />
+              <Route path="overdue" element={<OverdueBooksList />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>

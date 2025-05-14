@@ -3,23 +3,23 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 const RequireAuth = ({ allowedRoles }) => {
-  const { user, token, role } = useAuth();
+  const { currentUser, token } = useAuth();
   const location = useLocation();
   
-  console.log('Auth check:', { user, token, role, allowedRoles, path: location.pathname });
+  console.log('Auth check:', { currentUser, token, allowedRoles, path: location.pathname });
 
   // Check if user is authenticated
-  if (!user || !token) {
+  if (!currentUser || !token) {
     console.log('No user or token, redirecting to login');
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Map staff role to librarian for permission checking
-  const effectiveRole = role === 'staff' ? 'librarian' : role;
+  const effectiveRole = currentUser.role === 'staff' ? 'librarian' : currentUser.role;
 
   // Check if user has allowed role
   if (!allowedRoles.includes(effectiveRole)) {
-    console.log('User role not allowed:', role);
+    console.log('User role not allowed:', currentUser.role);
     return <Navigate to="/" replace />;
   }
 

@@ -10,8 +10,10 @@ const NotFound = () => {
   const getDashboardLink = () => {
     if (!isAuthenticated) return '/';
     
-    if (currentUser?.role === 'admin' || currentUser?.role === 'librarian') {
+    if (currentUser?.role === 'admin') {
       return '/admin/dashboard';
+    } else if (currentUser?.role === 'librarian' || currentUser?.role === 'staff') {
+      return '/librarian/dashboard';
     } else {
       return '/user/dashboard';
     }

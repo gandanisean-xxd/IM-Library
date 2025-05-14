@@ -20,53 +20,53 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
   const location = useLocation();
-  const { user, logout } = useAuth();  // Change this line to get user instead of currentUser
+  const { currentUser, logout } = useAuth();
   
-  // Update role checks to use user.role
-  const isAdmin = user?.role === 'staff';
-  const isLibrarian = user?.role === 'librarian';
+  // Update role checks
+  const isAdmin = currentUser?.role === 'admin';
+  const isLibrarian = currentUser?.role === 'librarian';
   const isStaff = isAdmin || isLibrarian;
 
   const userInitials = React.useMemo(() => {
-    if (!user) return '';
+    if (!currentUser) return '';
     
-    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
-      return `${user.LIBRARIAN_FIRSTNAME.charAt(0)}${user.LIBRARIAN_LASTNAME.charAt(0)}`;
+    if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
+      return `${currentUser.LIBRARIAN_FIRSTNAME.charAt(0)}${currentUser.LIBRARIAN_LASTNAME.charAt(0)}`;
     }
     
-    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
-      return `${user.STUDENT_FIRSTNAME.charAt(0)}${user.STUDENT_LASTNAME.charAt(0)}`;
+    if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
+      return `${currentUser.STUDENT_FIRSTNAME.charAt(0)}${currentUser.STUDENT_LASTNAME.charAt(0)}`;
     }
     
-    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
-      return `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`;
+    if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
+      return `${currentUser.FACULTY_FIRSTNAME.charAt(0)}${currentUser.FACULTY_LASTNAME.charAt(0)}`;
     }
 
     return '';
-  }, [user]);
+  }, [currentUser]);
 
   const userFullName = React.useMemo(() => {
-    if (!user) return '';
+    if (!currentUser) return '';
     
-    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
-      return `${user.LIBRARIAN_FIRSTNAME} ${user.LIBRARIAN_LASTNAME}`;
+    if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
+      return `${currentUser.LIBRARIAN_FIRSTNAME} ${currentUser.LIBRARIAN_LASTNAME}`;
     }
     
-    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
-      return `${user.STUDENT_FIRSTNAME} ${user.STUDENT_LASTNAME}`;
+    if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
+      return `${currentUser.STUDENT_FIRSTNAME} ${currentUser.STUDENT_LASTNAME}`;
     }
     
-    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
-      return `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`;
+    if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
+      return `${currentUser.FACULTY_FIRSTNAME} ${currentUser.FACULTY_LASTNAME}`;
     }
     
     return '';
-  }, [user]);
+  }, [currentUser]);
   
   const navLinks = [
     {
       name: 'Dashboard',
-      path: isStaff ? '/admin/dashboard' : '/user/dashboard',
+      path: isAdmin ? '/admin/dashboard' : isLibrarian ? '/librarian/dashboard' : '/user/dashboard',
       icon: <LayoutDashboard size={20} />,
       visible: true,
     },
@@ -90,9 +90,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
     },
     {
       name: 'Borrowings',
-      path: '/admin/borrowings',
+      path: '/librarian/borrowings',
       icon: <BookMarked size={20} />,
-      visible: isStaff,
+      visible: isLibrarian,
     },
     {
       name: 'Students',
@@ -114,13 +114,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
     },
     {
       name: 'Reports',
-      path: '/admin/reports',
+      path: '/librarian/reports',
       icon: <BarChart2 size={20} />,
-      visible: isStaff,
+      visible: isLibrarian,
     },
     {
       name: 'Settings',
-      path: isStaff ? '/admin/settings' : '/user/settings',
+      path: isAdmin ? '/admin/settings' : isLibrarian ? '/librarian/settings' : '/user/settings',
       icon: <Settings size={20} />,
       visible: true,
     },
@@ -148,18 +148,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
         </div>
         
         <div className="px-4 py-6 border-b border-gray-800">
-        <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-            {userInitials}
-          </div>
-          <div className="ml-3">
-            <p className="text-sm font-medium text-white">
-              {userFullName}
-            </p>
-            <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
+              {userInitials}
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-white">
+                {userFullName}
+              </p>
+              <p className="text-xs text-gray-400 capitalize">{currentUser?.role}</p>
+            </div>
           </div>
         </div>
-      </div>
         
         <nav className="flex-1 py-4 overflow-y-auto">
           <ul className="px-2 space-y-1">

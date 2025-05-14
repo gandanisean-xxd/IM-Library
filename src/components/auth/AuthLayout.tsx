@@ -14,8 +14,6 @@ const AuthLayout: React.FC = () => {
             return 'Student';
         case 'faculty':
             return 'Faculty';
-        case 'staff':
-            return 'Staff';
         case 'librarian':
             return 'Librarian';
         case 'admin':
@@ -31,8 +29,6 @@ const getHeaderColor = () => {
             return 'bg-blue-600';
         case 'faculty':
             return 'bg-amber-600';
-        case 'staff':
-            return 'bg-emerald-600';
         case 'librarian':
             return 'bg-purple-600';
         case 'admin':
@@ -48,8 +44,6 @@ const getPrimaryColor = () => {
             return 'text-blue-600 border-blue-600';
         case 'faculty':
             return 'text-amber-600 border-amber-600';
-        case 'staff':
-            return 'text-emerald-600 border-emerald-600';
         case 'librarian':
             return 'text-purple-600 border-purple-600';
         case 'admin':
