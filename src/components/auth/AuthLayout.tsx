@@ -86,24 +86,20 @@ const getButtonColor = () => {
           </h2>
           
           {/* Toggle between login and signup */}
-          <div className="flex border-b border-gray-200 mb-6">
-            <button
-              className={`flex-1 py-2 font-medium border-b-2 transition-colors duration-300 ${
-                isLogin 
-                  ? getPrimaryColor() 
-                  : 'text-gray-400 border-transparent'
-              }`}
-              onClick={() => setIsLogin(true)}
-            >
-              Login
-            </button>
-            {role !== 'staff' && (
+          <div className="flex justify-between items-center mb-6">
+            <h2 className={`text-xl font-semibold ${getPrimaryColor()}`}>{isLogin ? 'Login' : 'Sign Up'} as {getRoleDisplayName()}</h2>
+            {/* Hide sign-up toggle for admin */}
+            {role !== 'admin' && !isLogin && (
               <button
-                className={`flex-1 py-2 font-medium border-b-2 transition-colors duration-300 ${
-                  !isLogin 
-                    ? getPrimaryColor() 
-                    : 'text-gray-400 border-transparent'
-                }`}
+                className="text-sm text-gray-600 hover:text-gray-900 focus:outline-none"
+                onClick={() => setIsLogin(true)}
+              >
+                Already have an account? Login
+              </button>
+            )}
+            {role !== 'admin' && isLogin && (
+              <button
+                className="text-sm text-gray-600 hover:text-gray-900 focus:outline-none"
                 onClick={() => setIsLogin(false)}
               >
                 Sign Up

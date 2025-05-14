@@ -25,6 +25,8 @@ import FineManagement from './components/librarian/FineManagement';
 import Reports from './components/librarian/Reports';
 import NotificationCenter from './components/librarian/NotificationCenter';
 import OverdueBooksList from './components/librarian/OverdueBooksList';
+import BookManagement from './components/librarian/BookManagement';
+import LibrarianNews from './components/librarian/LibrarianNews';
 
 function App() {
   return (
@@ -54,12 +56,10 @@ function App() {
             <Route path="/librarian" element={<DashboardLayout />}>
               <Route index element={<Navigate to="/librarian/dashboard" replace />} />
               <Route path="dashboard" element={<LibrarianDashboard />} />
-              <Route path="borrow-verification" element={<BorrowVerificationForm />} />
-              <Route path="pending-pickups" element={<PendingPickupsList />} />
-              <Route path="fines" element={<FineManagement />} />
               <Route path="reports" element={<Reports />} />
               <Route path="notifications" element={<NotificationCenter />} />
-              <Route path="overdue" element={<OverdueBooksList />} />
+              <Route path="books" element={<BookManagement />} />
+              <Route path="news" element={<LibrarianNews />} />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>

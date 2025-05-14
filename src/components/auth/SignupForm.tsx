@@ -35,6 +35,14 @@ const validatePassword = (password: string): { isValid: boolean; errors: string[
 };
 
 const SignupForm: React.FC<SignupFormProps> = ({ role, buttonColorClass }) => {
+  // Block admin sign-up entirely
+  if (role === 'admin') {
+    return (
+      <div className="text-center text-red-600 font-semibold p-8">
+        Admin sign-up is not allowed. Please contact your system administrator if you need admin access.
+      </div>
+    );
+  }
   const navigate = useNavigate();
   
   const [formData, setFormData] = useState({

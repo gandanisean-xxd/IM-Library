@@ -34,28 +34,30 @@ interface TabProps {
 
 const StatsCard: React.FC<StatsCardProps> = ({ title, value, change, trend, description, icon, color }) => {
   const colors = {
-    blue: 'bg-blue-50 text-blue-600',
-    amber: 'bg-amber-50 text-amber-600',
-    red: 'bg-red-50 text-red-600',
-    green: 'bg-green-50 text-green-600',
+    blue: 'from-blue-400 to-blue-200 text-blue-700',
+    amber: 'from-amber-400 to-amber-200 text-amber-700',
+    red: 'from-red-400 to-red-200 text-red-700',
+    green: 'from-green-400 to-green-200 text-green-700',
   };
-
+  const borderColors = {
+    blue: 'border-blue-100',
+    amber: 'border-amber-100',
+    red: 'border-red-100',
+    green: 'border-green-100',
+  };
   return (
-    <div className="bg-white rounded-xl shadow-md p-6">
-      <div className={`rounded-full w-12 h-12 ${colors[color]} flex items-center justify-center mb-4`}>
-        {icon}
+    <div className={`bg-white rounded-2xl border ${borderColors[color]} shadow-lg p-3 transition-transform hover:scale-[1.03] hover:shadow-xl duration-200`}>  
+      <div className={`rounded-full w-9 h-9 bg-gradient-to-br ${colors[color]} flex items-center justify-center mb-2 shadow-inner`}>
+        {React.cloneElement(icon as React.ReactElement, { className: 'h-4 w-4' })}
       </div>
-      <h3 className="text-gray-500 text-sm">{title}</h3>
-      <div className="flex items-baseline space-x-2">
-        <p className="text-2xl font-bold text-gray-800">{value}</p>
-        <span className={`inline-flex items-center text-sm ${
-          trend === 'up' ? 'text-green-600' : 'text-red-600'
-        }`}>
-          {trend === 'up' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
-          {change}
+      <h3 className="text-gray-500 text-[10px] font-semibold tracking-wide mb-0.5 uppercase">{title}</h3>
+      <div className="flex items-baseline space-x-1 mb-0.5">
+        <p className="text-xl font-extrabold text-gray-800 leading-tight">{value}</p>
+        <span className={`inline-flex items-center text-xs font-medium ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}> 
+          {trend === 'up' ? <ArrowUp className="h-3 w-3 mr-0.5" /> : <ArrowDown className="h-3 w-3 mr-0.5" />} {change}
         </span>
       </div>
-      <p className="text-gray-400 text-sm">{description}</p>
+      <p className="text-gray-400 text-[10px]">{description}</p>
     </div>
   );
 };
@@ -134,14 +136,14 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 mb-6">
         <StatsCard
           title="Total Borrowings"
           value={statistics.totalBorrowings}
           change="+12.5%"
           trend="up"
           description="vs. last month"
-          icon={<BookOpen className="h-6 w-6" />}
+          icon={<BookOpen />}
           color="blue"
         />
         <StatsCard
@@ -150,7 +152,7 @@ const Dashboard: React.FC = () => {
           change="+8.2%"
           trend="up"
           description="vs. last month"
-          icon={<Users className="h-6 w-6" />}
+          icon={<Users />}
           color="amber"
         />
         <StatsCard
@@ -159,7 +161,7 @@ const Dashboard: React.FC = () => {
           change="-25%"
           trend="down"
           description="vs. last month"
-          icon={<AlertCircle className="h-6 w-6" />}
+          icon={<AlertCircle />}
           color="red"
         />
         <StatsCard
@@ -168,7 +170,7 @@ const Dashboard: React.FC = () => {
           change="+5%"
           trend="up"
           description="vs. last month"
-          icon={<BookOpen className="h-6 w-6" />}
+          icon={<BookOpen />}
           color="green"
         />
       </div>
@@ -248,17 +250,12 @@ const Dashboard: React.FC = () => {
           </Tab.Group>
         </div>
 
-        {/* Recent Activity Sidebar */}
+        {/* Latest News/Activity Banner */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold">Recent Activity</h2>
-              <NotificationCenter />
-            </div>
-            <div className="space-y-4">
-              {recentActivity.map((activity, index) => (
-                <ActivityItem key={index} {...activity} />
-              ))}
+          <div className="bg-white rounded-xl shadow-md p-6 flex flex-col items-start justify-center h-full">
+            <h2 className="text-lg font-semibold mb-2">Latest News</h2>
+            <div className="mt-4">
+              <ActivityItem {...recentActivity[0]} />
             </div>
           </div>
         </div>
@@ -266,5 +263,8 @@ const Dashboard: React.FC = () => {
     </div>
   );
 };
+
+// --- Dashboard Layout Improvements ---
+// Responsive grid, section headers, and improved spacing
 
 export default Dashboard; 
