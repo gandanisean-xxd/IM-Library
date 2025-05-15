@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
@@ -8,52 +8,52 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
-  const { user } = useAuth();
+  const { currentUser } = useAuth();
 
-  // Get user's full name with null checks and default values
-  const userFullName = React.useMemo(() => {
-    if (!user) return '';
+  // Get currentUser's full name with null checks and default values
+  const currentUserFullName = React.useMemo(() => {
+    if (!currentUser) return '';
     
-    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
-      return `${user.STUDENT_FIRSTNAME} ${user.STUDENT_LASTNAME}`;
+    if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
+      return `${currentUser.STUDENT_FIRSTNAME} ${currentUser.STUDENT_LASTNAME}`;
     }
     
-    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
-      return `${user.FACULTY_FIRSTNAME} ${user.FACULTY_LASTNAME}`;
+    if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
+      return `${currentUser.FACULTY_FIRSTNAME} ${currentUser.FACULTY_LASTNAME}`;
     }
 
-    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
-      return `${user.LIBRARIAN_FIRSTNAME} ${user.LIBRARIAN_LASTNAME}`;
+    if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
+      return `${currentUser.LIBRARIAN_FIRSTNAME} ${currentUser.LIBRARIAN_LASTNAME}`;
     }
     
     return '';
-  }, [user]);
+  }, [currentUser]);
 
-  // Get user initials with null checks
-  const userInitials = React.useMemo(() => {
-    if (!user) return '';
+  // Get currentUser initials with null checks
+  const currentUserInitials = React.useMemo(() => {
+    if (!currentUser) return '';
     
-    if (user.STUDENT_FIRSTNAME && user.STUDENT_LASTNAME) {
-      return `${user.STUDENT_FIRSTNAME.charAt(0)}${user.STUDENT_LASTNAME.charAt(0)}`;
+    if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
+      return `${currentUser.STUDENT_FIRSTNAME.charAt(0)}${currentUser.STUDENT_LASTNAME.charAt(0)}`;
     }
     
-    if (user.FACULTY_FIRSTNAME && user.FACULTY_LASTNAME) {
-      return `${user.FACULTY_FIRSTNAME.charAt(0)}${user.FACULTY_LASTNAME.charAt(0)}`;
+    if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
+      return `${currentUser.FACULTY_FIRSTNAME.charAt(0)}${currentUser.FACULTY_LASTNAME.charAt(0)}`;
     }
     
-    if (user.LIBRARIAN_FIRSTNAME && user.LIBRARIAN_LASTNAME) {
-      return `${user.LIBRARIAN_FIRSTNAME.charAt(0)}${user.LIBRARIAN_LASTNAME.charAt(0)}`;
+    if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
+      return `${currentUser.LIBRARIAN_FIRSTNAME.charAt(0)}${currentUser.LIBRARIAN_LASTNAME.charAt(0)}`;
     }
 
     return '';
-  }, [user]);
+  }, [currentUser]);
 
   const roleDisplay = React.useMemo(() => {
-    if (!user?.role) return '';
+    if (!currentUser?.role) return '';
     
     // Capitalize first letter of role
-    return user.role.charAt(0).toUpperCase() + user.role.slice(1);
-  }, [user]);
+    return currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+  }, [currentUser]);
 
   return (
     <header className="bg-white shadow-sm z-20">
@@ -69,26 +69,19 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
         </div>
         
         <div className="flex items-center space-x-4">
-          <button 
-            className="p-1 text-gray-600 rounded-full hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative"
-            aria-label="Notifications"
-          >
-            <Bell size={20} />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
-          {user && (
+
+          {currentUser && (
             <div className="relative group">
               <button 
                 className="flex items-center text-sm font-medium text-gray-700 rounded-full hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 aria-label="User menu"
               >
                 <span className="hidden md:flex md:flex-col md:items-end mr-2">
-                  <span className="font-medium">{userFullName}</span>
+                  <span className="font-medium">{currentUserFullName}</span>
                   <span className="text-xs text-gray-500">{roleDisplay}</span>
                 </span>
                 <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold">
-                  {userInitials}
+                  {currentUserInitials}
                 </div>
               </button>
             </div>

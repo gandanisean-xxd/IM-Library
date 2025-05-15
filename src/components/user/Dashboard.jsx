@@ -100,44 +100,6 @@ const UserDashboard = () => {
         <p className="opacity-90">Welcome to your library dashboard!</p>
       </div>
       
-      {/* Statistics cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-700">Current Borrows</h3>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <BookMarked className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-gray-800">{borrowed}</p>
-          <p className="text-sm text-gray-500 mt-2">
-            {user?.role === 'student' ? 'Books currently borrowed' : 'Materials in possession'}
-          </p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-700">Returned</h3>
-            <div className="bg-green-100 p-3 rounded-full">
-              <BookOpen className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-gray-800">{returned}</p>
-          <p className="text-sm text-gray-500 mt-2">Books you've returned</p>
-        </div>
-        
-        <div className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-700">Overdue</h3>
-            <div className="bg-red-100 p-3 rounded-full">
-              <AlertCircle className="h-6 w-6 text-red-600" />
-            </div>
-          </div>
-          <p className="text-3xl font-bold text-gray-800">{overdue}</p>
-          <p className="text-sm text-gray-500 mt-2">Books past their due date</p>
-        </div>
-      </div>
-      
       {/* Recent Borrowings */}
       <div className="bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">

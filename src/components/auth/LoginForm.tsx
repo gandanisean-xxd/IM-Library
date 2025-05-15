@@ -31,13 +31,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ role, buttonColorClass }) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                student_id: role === 'student' ? studentId : undefined,
-                faculty_id: role === 'faculty' ? facultyId : undefined,
-                librarian_id: role === 'librarian' ? librarianId : undefined,
-                admin_id: role === 'admin' ? adminId : undefined,
-                password: password
-            })
+            body: JSON.stringify(
+                role === 'student' ? { student_id: studentId, password } :
+                role === 'faculty' ? { faculty_id: facultyId, password } :
+                role === 'librarian' ? { librarian_id: librarianId, password } :
+                role === 'admin' ? { admin_id: adminId, password } :
+                { password }
+            )
         });
 
         const data = await response.json();

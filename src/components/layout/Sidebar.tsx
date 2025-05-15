@@ -101,6 +101,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
       visible: isLibrarian,
     },
     {
+      name: 'Room Reservations',
+      path: '""',
+      icon: <BarChart2 size={20} />,
+      visible: true
+    },
+    {
       name: 'Students',
       path: '/admin/students',
       icon: <Users size={20} />,
@@ -120,7 +126,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
     },
     {
       name: 'Reports',
-      path: '/librarian/reports',
+      path: '""',
       icon: <BarChart2 size={20} />,
       visible: isLibrarian,
     },

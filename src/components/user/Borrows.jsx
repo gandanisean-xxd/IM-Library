@@ -1,26 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, BookOpen, Clock, CheckCircle, AlertCircle } from 'lucide-react';
-import { borrowings, books } from '../../mockData';
+import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 
 const UserBorrows = () => {
   const { currentUser } = useAuth();
   const [statusFilter, setStatusFilter] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Filter borrowings for the current user
-  const userBorrowings = borrowings
-    .filter(borrowing => borrowing.userId === currentUser?.id)
-    .map(borrowing => {
-      const book = books.find(b => b.id === borrowing.bookId);
-      return {
-        ...borrowing,
-        bookTitle: book ? book.name : 'Unknown Book',
-        bookAuthor: book ? book.author : 'Unknown Author',
-        bookCover: book ? book.cover : null,
-      };
-    });
-  
+  const [borrowings, setBorrowings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchBorrows = async () => {
+      const studentId = currentUser?.STUDENT_ID || currentUser?.id;
+      if (!studentId) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await axios.get('http://localhost:5000/api/borrows', {
+          params: { studentId }
+        });
+        if (res.data.success) {
+          // Map backend fields to frontend fields
+          const mapped = res.data.borrows.map(b => ({
+            id: b.BORROW_ID,
+            bookId: b.BOOK_ID,
+            borrowDate: b.BORROW_DATE,
+            dueDate: b.DUE_DATE,
+            returnDate: b.RETURN_DATE,
+            status: b.STATUS?.toLowerCase(),
+            // bookTitle, bookAuthor, bookCover: will be fetched below
+          }));
+          setBorrowings(mapped);
+        } else {
+          setError(res.data.message || 'Failed to fetch borrows');
+        }
+      } catch (e) {
+        setError('Failed to fetch borrows');
+      }
+      setLoading(false);
+    };
+    fetchBorrows();
+  }, [currentUser]);
+
+  // Optionally, fetch book details here if needed (e.g., from /api/books)
+  // For now, display only IDs if book info is not available.
+
+  // Filter borrowings for the current user (already filtered by backend)
+  const userBorrowings = borrowings.map(borrowing => ({
+    ...borrowing,
+    bookTitle: borrowing.bookTitle || `Book ID: ${borrowing.bookId}`,
+    bookAuthor: borrowing.bookAuthor || '',
+    bookCover: borrowing.bookCover || null,
+  }));
+
   // Apply filters
   const filteredBorrowings = userBorrowings.filter(borrowing => {
     const matchesSearch = 
@@ -93,6 +127,12 @@ const UserBorrows = () => {
           text: 'text-red-800',
           icon: <AlertCircle className="h-4 w-4 mr-1" />
         };
+      case 'pending':
+        return {
+          bg: 'bg-yellow-100',
+          text: 'text-yellow-800',
+          icon: <Clock className="h-4 w-4 mr-1 animate-pulse" />
+        };
       default:
         return {
           bg: 'bg-gray-100',
@@ -101,6 +141,17 @@ const UserBorrows = () => {
         };
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-40 text-blue-600 font-semibold">Loading your borrows...</div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-40 text-red-600 font-semibold">{error}</div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -119,7 +170,7 @@ const UserBorrows = () => {
             </div>
             <input
               type="text"
-              placeholder="Search by title or author..."
+              placeholder="Search by Book ID..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
@@ -209,30 +260,30 @@ const UserBorrows = () => {
                         Renew Borrowing
                       </button>
                     )}
-                  </div>
                 </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="p-12 text-center">
-            <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-1">No books found</h3>
-            <p className="text-gray-500">You haven't borrowed any books yet, or no books match your filters.</p>
-            <button 
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('');
-              }}
-            >
-              Clear filters
-            </button>
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-12 text-center">
+          <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-1">No borrow records found</h3>
+          <p className="text-gray-500">You haven't borrowed any books yet, or no books match your filters.</p>
+          <button 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('');
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
     </div>
-  );
+  </div>
+);
 };
 
 export default UserBorrows;

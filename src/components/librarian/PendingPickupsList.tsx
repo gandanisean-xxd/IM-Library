@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { format } from 'date-fns';
 
 interface PendingPickup {
@@ -10,48 +10,43 @@ interface PendingPickup {
   requestTime: string;
   pickupTime: string;
   status: 'pending' | 'verified' | 'expired' | 'cancelled';
-  timeRemaining: number; // in minutes
+
 }
 
-const PendingPickupsList: React.FC = () => {
-  const [pendingPickups, setPendingPickups] = useState<PendingPickup[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface PendingPickupsListProps {
+  borrows: any[];
+  loading: boolean;
+  error: string | null;
+  onApprove?: (id: string) => void;
+  onDeny?: (id: string) => void;
+}
 
-  useEffect(() => {
-    const fetchPendingPickups = async () => {
-      try {
-        // TODO: Implement API call to fetch pending pickups
-        // const response = await fetch('/api/librarian/pending-pickups');
-        // const data = await response.json();
-        // setPendingPickups(data);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching pending pickups:', error);
-        setError('Failed to fetch pending pickups');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPendingPickups();
-    const interval = setInterval(fetchPendingPickups, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleCancel = async (pickupId: string) => {
-    try {
-      // TODO: Implement API call to cancel pickup
-      // await fetch(`/api/librarian/cancel-pickup/${pickupId}`, {
-      //   method: 'POST',
-      // });
-      setPendingPickups(pendingPickups.filter(pickup => pickup.id !== pickupId));
-      setError(null); // Clear any previous errors
-    } catch (error) {
-      console.error('Error canceling pickup:', error);
-      setError('Failed to cancel pickup');
-    }
+const PendingPickupsList: React.FC<PendingPickupsListProps> = ({ borrows, loading, error, onApprove, onDeny }) => {
+  // Map borrows to PendingPickup structure
+  // Calculate time remaining in minutes until pickup expiry
+  const calcTimeRemaining = (pickupTime: string) => {
+    if (!pickupTime) return 0;
+    const now = new Date();
+    const pickup = new Date(pickupTime);
+    const diffMs = pickup.getTime() + 30 * 60 * 1000 - now.getTime(); // 30 min window
+    return Math.max(0, Math.ceil(diffMs / 60000));
   };
+
+  const pendingPickups: PendingPickup[] = borrows
+    .filter(borrow => borrow.STATUS && borrow.STATUS.toLowerCase() === 'pending')
+    .map(borrow => ({
+      id: borrow.BORROW_ID,
+      studentId: borrow.STUDENT_ID,
+      studentName: borrow.STUDENT_NAME || '',
+      bookId: borrow.BOOK_ID,
+      bookTitle: borrow.BOOK_TITLE || '',
+      requestTime: borrow.BORROW_DATE,
+      pickupTime: borrow.PICKUP_TIME || '',
+      status: 'pending',
+
+    }));
+
+  // Remove handleAction and handleCancel. Use props for button actions.
 
   if (loading) {
     return (
@@ -93,9 +88,7 @@ const PendingPickupsList: React.FC = () => {
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Pickup Time
                   </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time Remaining
-                  </th>
+
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
@@ -121,17 +114,13 @@ const PendingPickupsList: React.FC = () => {
                       {format(new Date(pickup.requestTime), 'PPp')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(pickup.pickupTime), 'PPp')}
+                      {(() => {
+                        const dt = new Date(pickup.pickupTime);
+                        dt.setHours(8, 0, 0, 0);
+                        return format(dt, 'PPp');
+                      })()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        pickup.timeRemaining > 15 ? 'bg-green-100 text-green-800' :
-                        pickup.timeRemaining > 5 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {pickup.timeRemaining > 0 ? `${pickup.timeRemaining} min` : 'Expired'}
-                      </span>
-                    </td>
+
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs rounded-full ${
                         pickup.status === 'pending' ? 'bg-blue-100 text-blue-800' :
@@ -143,12 +132,20 @@ const PendingPickupsList: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {pickup.status === 'pending' && (
-                        <button
-                          onClick={() => handleCancel(pickup.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Cancel
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onApprove && onApprove(pickup.id)}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => onDeny && onDeny(pickup.id)}
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                          >
+                            Deny
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

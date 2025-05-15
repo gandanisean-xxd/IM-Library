@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Tab } from '@headlessui/react';
 import { BookOpen, Users, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import BorrowVerificationForm from './BorrowVerificationForm';
-import NotificationCenter from './NotificationCenter';
 import PendingPickupsList from './PendingPickupsList';
 import OverdueBooksList from './OverdueBooksList';
 import FineManagement from './FineManagement';
@@ -87,6 +86,28 @@ const Dashboard: React.FC = () => {
     pendingPickups: '8',
   });
 
+  const [borrows, setBorrows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBorrows = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch('/api/librarian/borrows');
+        if (!response.ok) throw new Error('Failed to fetch borrow records');
+        const data = await response.json();
+        setBorrows(data.borrows || []);
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch borrow records');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBorrows();
+  }, []);
+
   const [recentActivity] = useState<ActivityItemProps[]>([
     {
       action: "Book Borrowed",
@@ -104,7 +125,7 @@ const Dashboard: React.FC = () => {
       action: "Overdue Notice",
       title: "1984",
       user: "Mike Wilson",
-      time: "5 hours ago"
+      time: "6 hours ago"
     }
   ]);
 
@@ -238,7 +259,7 @@ const Dashboard: React.FC = () => {
                 <BorrowVerificationForm />
               </Tab.Panel>
               <Tab.Panel>
-                <PendingPickupsList />
+                <PendingPickupsList borrows={borrows} loading={loading} error={error} />
               </Tab.Panel>
               <Tab.Panel>
                 <OverdueBooksList />

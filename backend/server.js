@@ -3,6 +3,7 @@ import oracledb from "oracledb";
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import nodemailer from 'nodemailer';
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const port = 5000;
@@ -29,7 +30,7 @@ app.use((err, req, res, next) => {
 });
 
 // Database configuration
-const dbConfig = {
+export const dbConfig = {
     user: "jorgi",            
     password: "12345",        
     connectString: "localhost:1521/XE"  // Changed to default Oracle XE service name
@@ -1053,6 +1054,31 @@ app.put('/api/auth/change-password', async (req, res) => {
     }
 });
 
+// Books catalog endpoint
+app.get('/api/books', async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const result = await connection.execute(
+            `SELECT BOOK_ID, BOOK_NAME, BOOK_AUTHOR, BOOK_CATEGORY, BOOK_QUANTITY, CAMPUS_AVAILABILITY FROM JORGI.BOOKS`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+        res.json({ success: true, books: result.rows });
+    } catch (err) {
+        console.error('Error fetching books:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch books', error: err.message });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
 // Reset librarian password endpoint
 app.post('/api/librarian/reset-password', async (req, res) => {
     let connection;
@@ -1104,6 +1130,97 @@ app.post('/api/librarian/reset-password', async (req, res) => {
         }
     }
 });
+
+// Borrow book endpoint
+app.post('/api/borrow', async (req, res) => {
+    let connection;
+    try {
+        const {
+            studentId,
+            bookId,
+            borrowDate,
+            returnDate,
+            pickupTime,
+            pickupExpiry
+        } = req.body;
+
+        if (!studentId || !bookId || !borrowDate || !returnDate || !pickupTime || !pickupExpiry) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required fields.'
+            });
+        }
+
+        connection = await oracledb.getConnection(dbConfig);
+
+        // Check for duplicate borrow (same student, same book, not yet returned or overdue)
+        const duplicateCheck = await connection.execute(
+            `SELECT * FROM JORGI.BORROWS WHERE STUDENT_ID = :1 AND BOOK_ID = :2 AND STATUS IN ('pending', 'borrowed', 'overdue')`,
+            [studentId, bookId]
+        );
+        if (duplicateCheck.rows.length > 0) {
+            return res.status(409).json({
+                success: false,
+                message: 'You have already borrowed this book and not yet returned it.'
+            });
+        }
+
+        // Generate UUID for BORROW_ID
+        const borrowId = uuidv4();
+        // Set initial status to 'PENDING' (uppercase, as required by updated constraint)
+        const status = 'PENDING';
+
+        // Insert into new BORROWS table with pickup fields
+        await connection.execute(
+            `INSERT INTO JORGI.BORROWS (BORROW_ID, STUDENT_ID, BOOK_ID, BORROW_DATE, DUE_DATE, PICKUP_TIME, PICKUP_EXPIRY, STATUS) VALUES (:1, :2, :3, TO_DATE(:4, 'YYYY-MM-DD'), TO_DATE(:5, 'YYYY-MM-DD'), TO_TIMESTAMP(:6, 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"'), TO_TIMESTAMP(:7, 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"'), :8)`,
+            [borrowId, studentId, bookId, borrowDate, returnDate, pickupTime, pickupExpiry, status]
+        );
+
+        // Update book quantity
+        const updateBook = await connection.execute(
+            `UPDATE JORGI.BOOKS SET BOOK_QUANTITY = BOOK_QUANTITY - 1 WHERE BOOK_ID = :1 AND BOOK_QUANTITY > 0`,
+            [bookId]
+        );
+        if (updateBook.rowsAffected === 0) {
+            // Rollback borrow record if book is unavailable
+            await connection.execute(
+                `DELETE FROM JORGI.BORROWS WHERE BORROW_ID = :1`,
+                [borrowId]
+            );
+            return res.status(400).json({
+                success: false,
+                message: 'Book is not available.'
+            });
+        }
+
+        await connection.commit();
+
+        // Notification logic removed (notifications tables dropped)
+        res.status(201).json({
+            success: true,
+            message: 'Book borrowed successfully.'
+        });
+    } catch (err) {
+        console.error('Borrow error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to borrow book.',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Register borrow endpoints
+import { borrowRoutes } from './borrowFecthing.js';
+app.use(borrowRoutes);
 
 // Start the server
 app.listen(port, () => {

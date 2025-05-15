@@ -2,7 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { BookOpen, Users, UserPlus } from 'lucide-react';
 
+import { useEffect } from 'react';
 const RoleSelection: React.FC = () => {
+  useEffect(() => {
+    const lastRole = localStorage.getItem('lastRole');
+    if (lastRole && ["student","faculty","librarian","admin"].includes(lastRole)) {
+      // Optionally, clear after redirect to avoid infinite loop
+      localStorage.removeItem('lastRole');
+      window.location.replace(`/auth/${lastRole}`);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center p-4">
       <div className="max-w-4xl w-full">
@@ -29,6 +39,7 @@ const RoleSelection: React.FC = () => {
               <Link 
                 to="/auth/student" 
                 className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-md transition-colors duration-300"
+                onClick={() => localStorage.setItem('lastRole', 'student')}
               >
                 Continue as Student
               </Link>
@@ -49,6 +60,7 @@ const RoleSelection: React.FC = () => {
               <Link 
                 to="/auth/faculty" 
                 className="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-6 rounded-md transition-colors duration-300"
+                onClick={() => localStorage.setItem('lastRole', 'faculty')}
               >
                 Continue as Faculty
               </Link>
@@ -62,6 +74,7 @@ const RoleSelection: React.FC = () => {
             <Link 
               to="/auth/librarian" 
               className="text-purple-600 hover:text-purple-800 font-semibold transition-colors duration-300"
+              onClick={() => localStorage.setItem('lastRole', 'librarian')}
             >
               Librarian Login
             </Link>
@@ -69,6 +82,7 @@ const RoleSelection: React.FC = () => {
             <Link 
               to="/auth/admin" 
               className="text-red-600 hover:text-red-800 font-semibold transition-colors duration-300"
+              onClick={() => localStorage.setItem('lastRole', 'admin')}
             >
               Admin Login
             </Link>

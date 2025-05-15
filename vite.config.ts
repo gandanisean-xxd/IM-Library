@@ -11,9 +11,12 @@ export default defineConfig({
 
   server: {
     port: 5173,
-    host: true, // Enable network access
+    host: true,
     watch: {
       usePolling: true
+    },
+    proxy: {
+      '/api': 'http://localhost:5000'
     }
   }
 });

@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import RoleSelection from './components/RoleSelection';
@@ -16,17 +16,10 @@ import UserBorrows from './components/user/Borrows';
 import Settings from './components/shared/Settings';
 import RequireAuth from './components/auth/RequireAuth';
 import NotFound from './components/shared/NotFound';
-
 // Import librarian components
 import LibrarianDashboard from './components/librarian/Dashboard';
-import BorrowVerificationForm from './components/librarian/BorrowVerificationForm';
-import PendingPickupsList from './components/librarian/PendingPickupsList';
-import FineManagement from './components/librarian/FineManagement';
-import Reports from './components/librarian/Reports';
-import NotificationCenter from './components/librarian/NotificationCenter';
-import OverdueBooksList from './components/librarian/OverdueBooksList';
 import BookManagement from './components/librarian/BookManagement';
-import LibrarianNews from './components/librarian/LibrarianNews';
+
 
 function App() {
   return (
@@ -56,10 +49,9 @@ function App() {
             <Route path="/librarian" element={<DashboardLayout />}>
               <Route index element={<Navigate to="/librarian/dashboard" replace />} />
               <Route path="dashboard" element={<LibrarianDashboard />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="notifications" element={<NotificationCenter />} />
+              
               <Route path="books" element={<BookManagement />} />
-              <Route path="news" element={<LibrarianNews />} />
+              
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>
