@@ -25,8 +25,13 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.3",
+<<<<<<< HEAD
     "recharts": "^2.12.3",
     "uuid": "^11.1.0"
+=======
+    "react-toastify": "^11.0.5",
+    "recharts": "^2.12.3"
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

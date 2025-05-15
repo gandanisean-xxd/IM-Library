@@ -1,0 +1,102 @@
+-- Drop existing table if it exists
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TABLE ROOM_RESERVATIONS CASCADE CONSTRAINTS';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -942 THEN -- ORA-00942: table or view does not exist
+         RAISE;
+      END IF;
+END;
+/
+
+-- Drop sequence if it exists
+BEGIN
+   EXECUTE IMMEDIATE 'DROP SEQUENCE room_reservations_seq';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -2289 THEN -- ORA-02289: sequence does not exist
+         RAISE;
+      END IF;
+END;
+/
+
+-- Drop trigger if it exists
+BEGIN
+   EXECUTE IMMEDIATE 'DROP TRIGGER room_reservations_bir';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -4080 THEN -- ORA-04080: trigger does not exist
+         RAISE;
+      END IF;
+END;
+/
+
+-- Create sequence for auto-incrementing RESERVATION_ID
+CREATE SEQUENCE room_reservations_seq
+    START WITH 1
+    INCREMENT BY 1
+    NOCACHE
+    NOCYCLE;
+
+-- Create ROOM_RESERVATIONS table
+CREATE TABLE ROOM_RESERVATIONS (    
+    RESERVATION_ID NUMBER PRIMARY KEY,
+    STUDENT_ID VARCHAR2(10) NOT NULL,
+    PROGRAM VARCHAR2(100) NOT NULL,
+    RESERVATION_DATE DATE NOT NULL,
+    TIME_SLOT VARCHAR2(50) NOT NULL,
+    MEMBER_COUNT NUMBER NOT NULL,
+    MEMBER_NAMES CLOB,
+    PURPOSE CLOB,
+    STATUS VARCHAR2(20) DEFAULT 'pending',
+    CREATED_AT TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_student
+        FOREIGN KEY (STUDENT_ID)
+        REFERENCES STUDENT(STUDENT_ID),
+    CONSTRAINT chk_status
+        CHECK (STATUS IN ('pending', 'approved', 'rejected', 'cancelled')),
+    CONSTRAINT chk_member_count
+        CHECK (MEMBER_COUNT BETWEEN 5 AND 10)
+);
+
+-- Create trigger to auto-generate RESERVATION_ID before insert
+CREATE OR REPLACE TRIGGER room_reservations_bir 
+BEFORE INSERT ON ROOM_RESERVATIONS 
+FOR EACH ROW
+BEGIN
+  SELECT room_reservations_seq.NEXTVAL 
+  INTO :new.RESERVATION_ID 
+  FROM dual;
+END;
+/
+
+-- Create indexes (with error handling if index already exists)
+BEGIN
+   EXECUTE IMMEDIATE 'CREATE INDEX IDX_RESERVATIONS_STUDENT ON ROOM_RESERVATIONS(STUDENT_ID)';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -955 THEN -- ORA-00955: name is already used by an existing object
+         RAISE;
+      END IF;
+END;
+/
+
+BEGIN
+   EXECUTE IMMEDIATE 'CREATE INDEX IDX_RESERVATIONS_DATETIME ON ROOM_RESERVATIONS(RESERVATION_DATE, TIME_SLOT)';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -955 THEN
+         RAISE;
+      END IF;
+END;
+/
+
+BEGIN
+   EXECUTE IMMEDIATE 'CREATE INDEX IDX_RESERVATIONS_STATUS ON ROOM_RESERVATIONS(STATUS)';
+EXCEPTION
+   WHEN OTHERS THEN
+      IF SQLCODE != -955 THEN
+         RAISE;
+      END IF;
+END;
+/

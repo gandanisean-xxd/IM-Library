@@ -16,6 +16,7 @@ import UserBorrows from './components/user/Borrows';
 import Settings from './components/shared/Settings';
 import RequireAuth from './components/auth/RequireAuth';
 import NotFound from './components/shared/NotFound';
+import ReservationForm from './components/user/ReservationForm';
 
 function App() {
   return (
@@ -47,6 +48,10 @@ function App() {
               <Route path="dashboard" element={<UserDashboard />} />
               <Route path="books" element={<UserBooks />} />
               <Route path="borrows" element={<UserBorrows />} />
+              <Route path="reservations" element={<div className="p-6">
+                  <h1 className="text-2xl font-bold mb-6">Room Reservation</h1>
+                  <ReservationForm />
+                </div> } />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>

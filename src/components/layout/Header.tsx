@@ -9,6 +9,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
   const { currentUser } = useAuth();
+<<<<<<< HEAD
 
   // Get currentUser's full name with null checks and default values
   const currentUserFullName = React.useMemo(() => {
@@ -22,17 +23,46 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
       return `${currentUser.FACULTY_FIRSTNAME} ${currentUser.FACULTY_LASTNAME}`;
     }
 
+=======
+  // Get user's full name with null checks and default values
+  const userFullName = React.useMemo(() => {
+    if (!currentUser) return '';
+    
+    if (currentUser.role === 'admin') {
+      return 'Administrator';
+    }
+
+    if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
+      return `${currentUser.STUDENT_FIRSTNAME} ${currentUser.STUDENT_LASTNAME}`;
+    }
+    
+    if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
+      return `${currentUser.FACULTY_FIRSTNAME} ${currentUser.FACULTY_LASTNAME}`;
+    }
+
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
     if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
       return `${currentUser.LIBRARIAN_FIRSTNAME} ${currentUser.LIBRARIAN_LASTNAME}`;
     }
     
     return '';
   }, [currentUser]);
+<<<<<<< HEAD
 
   // Get currentUser initials with null checks
   const currentUserInitials = React.useMemo(() => {
     if (!currentUser) return '';
     
+=======
+  // Get user initials with null checks
+  const userInitials = React.useMemo(() => {
+    if (!currentUser) return '';
+    
+    if (currentUser.role === 'admin') {
+      return 'AD';
+    }
+
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
     if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
       return `${currentUser.STUDENT_FIRSTNAME.charAt(0)}${currentUser.STUDENT_LASTNAME.charAt(0)}`;
     }
@@ -69,7 +99,18 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
         </div>
         
         <div className="flex items-center space-x-4">
+<<<<<<< HEAD
 
+=======
+          <button 
+            className="p-1 text-gray-600 rounded-full hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 relative"
+            aria-label="Notifications"
+          >
+            <Bell size={20} />
+            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
+          </button>
+          
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
           {currentUser && (
             <div className="relative group">
               <button 

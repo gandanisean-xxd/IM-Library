@@ -9,7 +9,9 @@ import {
   Settings, 
   LogOut,
   BookMarked,
-  BarChart2
+  BarChart2,
+  Calendar,
+  DoorOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -26,9 +28,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
   const isAdmin = currentUser?.role === 'admin';
   const isLibrarian = currentUser?.role === 'librarian';
   const isStaff = isAdmin || isLibrarian;
-
   const userInitials = React.useMemo(() => {
     if (!currentUser) return '';
+    
+    if (currentUser.role === 'admin') {
+      return 'AD';
+    }
     
     if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
       return `${currentUser.LIBRARIAN_FIRSTNAME.charAt(0)}${currentUser.LIBRARIAN_LASTNAME.charAt(0)}`;
@@ -44,9 +49,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
 
     return '';
   }, [currentUser]);
-
   const userFullName = React.useMemo(() => {
     if (!currentUser) return '';
+    
+    if (currentUser.role === 'admin') {
+      return 'Administrator';
+    }
     
     if (currentUser.LIBRARIAN_FIRSTNAME && currentUser.LIBRARIAN_LASTNAME) {
       return `${currentUser.LIBRARIAN_FIRSTNAME} ${currentUser.LIBRARIAN_LASTNAME}`;
@@ -59,7 +67,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
     if (currentUser.FACULTY_FIRSTNAME && currentUser.FACULTY_LASTNAME) {
       return `${currentUser.FACULTY_FIRSTNAME} ${currentUser.FACULTY_LASTNAME}`;
     }
-    
+
     return '';
   }, [currentUser]);
   
@@ -75,6 +83,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
       path: '/admin/books',
       icon: <BookOpen size={20} />,
       visible: isAdmin,
+    },
+    {
+    name: 'Room Reservations',
+    path: '/user/reservations',
+    icon: <Calendar size={20} />,
+    visible: !isStaff, // Only visible for students and faculty
+    },
+    {
+      name: 'Room Reservations',
+      path: '/librarian/room-reservations',
+      icon: <DoorOpen size={20} />,
+      visible: isLibrarian,
     },
     {
       name: 'Catalog',

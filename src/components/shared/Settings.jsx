@@ -11,13 +11,18 @@ const Settings = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationMessage, setConfirmationMessage] = useState('');
-  
-  const [profileData, setProfileData] = useState({
-    firstName: currentUser?.STUDENT_FIRSTNAME || currentUser?.FACULTY_FIRSTNAME || '',
-    lastName: currentUser?.STUDENT_LASTNAME || currentUser?.FACULTY_LASTNAME || '',
-    email: currentUser?.EMAIL || '',
+    const [profileData, setProfileData] = useState({
+    firstName: currentUser?.role === 'admin' ? 'Administrator' : 
+              currentUser?.STUDENT_FIRSTNAME || currentUser?.FACULTY_FIRSTNAME || 
+              currentUser?.LIBRARIAN_FIRSTNAME || '',
+    lastName: currentUser?.role === 'admin' ? '' : 
+             currentUser?.STUDENT_LASTNAME || currentUser?.FACULTY_LASTNAME || 
+             currentUser?.LIBRARIAN_LASTNAME || '',
+    email: currentUser?.EMAIL || currentUser?.ADMIN_EMAIL || '',
     studentId: currentUser?.STUDENT_ID || '',
     facultyId: currentUser?.FACULTY_ID || '',
+    adminId: currentUser?.ADMIN_ID || '',
+    librarianId: currentUser?.LIBRARIAN_ID || '',
     program: currentUser?.STUDENT_PROGRAM || '',
     campus: currentUser?.STUDENT_CAMPUS || '',
     expectedGraduateYear: currentUser?.EXPECTED_GRADUATEYEAR || '',
@@ -101,25 +106,42 @@ const Settings = () => {
     setIsLoading(true);
 
     try {
-      const endpoint = currentUser?.role === 'student' 
-        ? 'http://localhost:5000/api/student/update'
-        : 'http://localhost:5000/api/faculty/update';
+      const endpoint = currentUser?.role === 'admin'
+        ? 'http://localhost:5000/api/admin/update'
+        : currentUser?.role === 'student'
+          ? 'http://localhost:5000/api/student/update'
+          : currentUser?.role === 'faculty'
+            ? 'http://localhost:5000/api/faculty/update'
+            : 'http://localhost:5000/api/librarian/update';
 
-      const updateData = currentUser?.role === 'student' 
+      const updateData = currentUser?.role === 'admin'
         ? {
-            student_id: profileData.studentId,
-            student_firstname: profileData.firstName,
-            student_lastname: profileData.lastName,
-            email: profileData.email,
-            student_campus: profileData.campus,
+            admin_id: profileData.adminId,
+            admin_email: profileData.email,
             status: profileData.status
           }
-        : {
-            faculty_id: profileData.facultyId,
-            faculty_firstname: profileData.firstName,
-            faculty_lastname: profileData.lastName,
-            email: profileData.email
-          };
+        : currentUser?.role === 'student'
+          ? {
+              student_id: profileData.studentId,
+              student_firstname: profileData.firstName,
+              student_lastname: profileData.lastName,
+              email: profileData.email,
+              student_campus: profileData.campus,
+              status: profileData.status
+            }
+          : currentUser?.role === 'faculty'
+            ? {
+                faculty_id: profileData.facultyId,
+                faculty_firstname: profileData.firstName,
+                faculty_lastname: profileData.lastName,
+                email: profileData.email
+              }
+            : {
+                librarian_id: profileData.librarianId,
+                librarian_firstname: profileData.firstName,
+                librarian_lastname: profileData.lastName,
+                email: profileData.email
+              };
 
       console.log('Sending request to:', endpoint);
       const response = await fetch(endpoint, {
@@ -174,7 +196,7 @@ const Settings = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          userId: currentUser?.STUDENT_ID || currentUser?.FACULTY_ID,
+          userId: currentUser?.STUDENT_ID || currentUser?.FACULTY_ID || currentUser?.ADMIN_ID,
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
           role: currentUser?.role
@@ -316,6 +338,38 @@ const Settings = () => {
                       />
                     </div>
                   </div>
+                  
+                  {currentUser?.role === 'admin' && (
+                    <div>
+                      <label htmlFor="adminId" className="block text-sm font-medium text-gray-700 mb-1">
+                        Admin ID
+                      </label>
+                      <input
+                        type="text"
+                        id="adminId"
+                        name="adminId"
+                        value={profileData.adminId}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100"
+                        readOnly
+                      />
+                    </div>
+                  )}
+                  
+                  {currentUser?.role === 'librarian' && (
+                    <div>
+                      <label htmlFor="librarianId" className="block text-sm font-medium text-gray-700 mb-1">
+                        Librarian ID
+                      </label>
+                      <input
+                        type="text"
+                        id="librarianId"
+                        name="librarianId"
+                        value={profileData.librarianId}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100"
+                        readOnly
+                      />
+                    </div>
+                  )}
                   
                   {currentUser?.role === 'student' && (
                     <>

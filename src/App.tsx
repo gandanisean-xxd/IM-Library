@@ -16,10 +16,20 @@ import UserBorrows from './components/user/Borrows';
 import Settings from './components/shared/Settings';
 import RequireAuth from './components/auth/RequireAuth';
 import NotFound from './components/shared/NotFound';
+<<<<<<< HEAD
+=======
+import ReservationForm from './components/user/ReservationForm';
+
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
 // Import librarian components
 import LibrarianDashboard from './components/librarian/Dashboard';
 import BookManagement from './components/librarian/BookManagement';
+<<<<<<< HEAD
 
+=======
+import LibrarianNews from './components/librarian/LibrarianNews';
+import RoomReservations from './components/librarian/RoomReservations';
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
 
 function App() {
   return (
@@ -51,7 +61,12 @@ function App() {
               <Route path="dashboard" element={<LibrarianDashboard />} />
               
               <Route path="books" element={<BookManagement />} />
+<<<<<<< HEAD
               
+=======
+              <Route path="room-reservations" element={<RoomReservations />} />
+              <Route path="news" element={<LibrarianNews />} />
+>>>>>>> 0ef76e0ee4fd50d8aa40f7941e3383128544db64
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>
@@ -63,6 +78,10 @@ function App() {
               <Route path="dashboard" element={<UserDashboard />} />
               <Route path="books" element={<UserBooks />} />
               <Route path="borrows" element={<UserBorrows />} />
+              <Route path="reservations" element={<div className="p-6">
+                                <h1 className="text-2xl font-bold mb-6">Room Reservation</h1>
+                                <ReservationForm />
+                              </div> } />
               <Route path="settings" element={<Settings />} />
             </Route>
           </Route>
