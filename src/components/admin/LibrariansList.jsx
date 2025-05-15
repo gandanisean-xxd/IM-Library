@@ -1,40 +1,59 @@
 import React, { useState } from 'react';
-import { Search, UserPlus, Edit, Trash2 } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, X } from 'lucide-react';
 import { users } from '../../mockData';
 
 const LibrariansList = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Filter librarians and admins from users
-  const staff = users.filter(user => user.role === 'librarian' || user.role === 'admin');
-  
-  // Filter staff based on search
-  const filteredStaff = staff.filter(member => {
-    const fullName = `${member.firstName} ${member.lastName}`.toLowerCase();
-    const matchesSearch = 
-      fullName.includes(searchTerm.toLowerCase()) ||
-      (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    return matchesSearch;
-  });
+  const [librarians, setLibrarians] = useState(users.filter(user => user.role === 'librarian'));
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedLibrarian, setSelectedLibrarian] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  // Handle edit librarian
+  const handleEdit = (librarian) => {
+    setSelectedLibrarian(librarian);
+    setShowEditModal(true);
+  };
+
+  // Handle delete librarian
+  const handleDelete = (librarianId) => {
+    if (window.confirm('Are you sure you want to delete this librarian?')) {
+      setLibrarians(librarians.filter(lib => lib.id !== librarianId));
+    }
+  };
+  // Handle save edit
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    setLibrarians(librarians.map(lib => 
+      lib.id === selectedLibrarian.id ? selectedLibrarian : lib
+    ));
+    setShowEditModal(false);
+  };
+  // Filter librarians based on search
+  const filteredLibrarians = librarians.filter(librarian =>
+    librarian.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    librarian.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    librarian.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    librarian.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header and actions */}
+    <div className="p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Library Staff</h1>
           <p className="text-gray-600">Manage library staff accounts and permissions</p>
         </div>
-        
-        <button className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+        >
           <UserPlus className="h-5 w-5 mr-2" />
           Add New Staff
         </button>
       </div>
-      
-      {/* Search bar */}
-      <div className="bg-white rounded-xl p-4 shadow-md">
+
+      <div className="bg-white rounded-xl p-4 shadow-md mt-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -48,95 +67,125 @@ const LibrariansList = () => {
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
-          
-          <div className="flex gap-2">
-            <button className="flex-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium py-2 px-4 rounded-lg transition-colors">
-              Export
-            </button>
-            <button className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors">
-              Filter
-            </button>
-          </div>
         </div>
       </div>
-      
-      {/* Librarians list */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Role
-                </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+
+      <div className="mt-6">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Librarian ID
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Name
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">            {filteredLibrarians.map((librarian) => (
+              <tr key={librarian.id}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{librarian.id}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {librarian.firstName} {librarian.lastName}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{librarian.email}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button
+                    onClick={() => handleEdit(librarian)}
+                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(librarian.id)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredStaff.map(member => (
-                <tr key={member.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <span className="text-emerald-800 font-semibold">
-                          {member.firstName.charAt(0)}{member.lastName.charAt(0)}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {member.firstName} {member.lastName}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {member.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      member.role === 'admin' 
-                        ? 'bg-purple-100 text-purple-800' 
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}>
-                      {member.role === 'admin' ? 'Administrator' : 'Librarian'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end space-x-2">
-                      <button className="text-emerald-600 hover:text-emerald-900">
-                        <Edit className="h-5 w-5" />
-                      </button>
-                      <button className="text-red-600 hover:text-red-900" disabled={member.role === 'admin'}>
-                        <Trash2 className={`h-5 w-5 ${member.role === 'admin' ? 'opacity-30 cursor-not-allowed' : ''}`} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination */}
-        <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredStaff.length}</span> of{' '}
-                <span className="font-medium">{filteredStaff.length}</span> results
-              </p>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <h3 className="text-lg leading-6 font-medium text-gray-900">Edit Librarian</h3>
+              <form onSubmit={handleSaveEdit} className="mt-4 text-left">
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Librarian ID</label>
+                  <input
+                    type="text"
+                    value={selectedLibrarian.LIBRARIAN_ID}
+                    disabled
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+                  <input
+                    type="text"
+                    value={selectedLibrarian.LIBRARIAN_FIRSTNAME}
+                    onChange={(e) => setSelectedLibrarian({...selectedLibrarian, LIBRARIAN_FIRSTNAME: e.target.value})}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
+                  <input
+                    type="text"
+                    value={selectedLibrarian.LIBRARIAN_LASTNAME}
+                    onChange={(e) => setSelectedLibrarian({...selectedLibrarian, LIBRARIAN_LASTNAME: e.target.value})}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={selectedLibrarian.EMAIL}
+                    onChange={(e) => setSelectedLibrarian({...selectedLibrarian, EMAIL: e.target.value})}
+                    className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="flex justify-end gap-4 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

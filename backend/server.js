@@ -42,6 +42,142 @@ oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
 oracledb.autoCommit = true;
 
+// Add admin-specific error handling
+const validateAdminCredentials = async (admin_id, password, connection) => {
+    try {
+        // Convert admin_id to uppercase to match database convention
+        const normalized_admin_id = admin_id.toUpperCase();
+        const result = await connection.execute(
+            `SELECT * FROM ADMIN WHERE ADMIN_ID = :1`,
+            [normalized_admin_id],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (!result.rows || result.rows.length === 0) {
+            return { success: false, message: 'Invalid Admin ID or password' };
+        }
+
+        const user = result.rows[0];
+        const adminPasswordField = user.ADMIN_PASSWORD || user.PASSWORD;
+
+        if (!adminPasswordField) {
+            return { success: false, message: 'Admin account not properly configured' };
+        }
+
+        // Handle both hashed and plain text passwords
+        let isValidPassword = false;
+        if (adminPasswordField.startsWith('$2')) {
+            isValidPassword = await bcrypt.compare(password, adminPasswordField);
+        } else {
+            isValidPassword = password === adminPasswordField;
+            if (isValidPassword) {
+                // Update to hashed password
+                const hashedPassword = await hashPassword(password);
+                await connection.execute(
+                    `UPDATE ADMIN SET ADMIN_PASSWORD = :1 WHERE ADMIN_ID = :2`,
+                    [hashedPassword, admin_id],
+                    { autoCommit: true }
+                );
+            }
+        }
+
+        if (!isValidPassword) {
+            return { success: false, message: 'Invalid Admin ID or password' };
+        }
+
+        // Clean user object for response
+        delete user.ADMIN_PASSWORD;
+        delete user.PASSWORD;
+        user.EMAIL = user.ADMIN_EMAIL;
+        user.role = 'admin';
+
+        return { 
+            success: true, 
+            user,
+            token: Buffer.from(`${user.ADMIN_ID}:${Date.now()}`).toString('base64')
+        };
+    } catch (error) {
+        console.error('Admin validation error:', error);
+        return { success: false, message: 'Error validating admin credentials' };
+    }
+};
+
+// Add this before the login endpoint
+const handleAdminLogin = async (admin_id, password, connection) => {
+    try {
+        console.log('handleAdminLogin called with admin_id:', admin_id);
+        // Convert admin_id to uppercase to match database convention
+        const normalized_admin_id = admin_id.toUpperCase();
+        const result = await connection.execute(
+            `SELECT * FROM ADMIN WHERE ADMIN_ID = :1`,
+            [normalized_admin_id],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+        console.log('Database query result:', result.rows ? 'Found rows' : 'No rows found');
+
+        if (!result.rows || result.rows.length === 0) {
+            return { success: false, message: 'Invalid Admin ID or password' };
+        }
+
+        const user = result.rows[0];
+        console.log('Found admin user:', { 
+            id: user.ADMIN_ID,
+            hasPassword: !!user.PASSWORD,
+            hasAdminPassword: !!user.ADMIN_PASSWORD
+        });
+
+        const passwordField = user.ADMIN_PASSWORD || user.PASSWORD;
+        if (!passwordField) {
+            console.log('No password field found in admin record');
+            return { success: false, message: 'Admin account not properly configured' };
+        }
+
+        // Compare passwords
+        console.log('Comparing passwords - stored password type:', passwordField.startsWith('$2') ? 'hashed' : 'plain');
+        let isValid = false;
+        
+        if (passwordField.startsWith('$2')) {
+            isValid = await bcrypt.compare(password, passwordField);
+            console.log('Bcrypt comparison result:', isValid);
+        } else {
+            isValid = password === passwordField;
+            console.log('Plain text comparison result:', isValid);
+            
+            if (isValid) {                console.log('Upgrading plain text password to hashed version');
+                const hashedPassword = await hashPassword(password);
+                await connection.execute(
+                    `UPDATE ADMIN SET ADMIN_PASSWORD = :1 WHERE ADMIN_ID = :2`,
+                    [hashedPassword, normalized_admin_id],
+                    { autoCommit: true }
+                );
+            }
+        }
+        
+        if (!isValid) {
+            return { success: false, message: 'Invalid Admin ID or password' };
+        }
+
+        // Clean up user object for response
+        delete user.ADMIN_PASSWORD;
+        delete user.PASSWORD;
+        user.EMAIL = user.ADMIN_EMAIL;
+        user.role = 'admin';
+
+        const token = Buffer.from(`${user.ADMIN_ID}:${Date.now()}`).toString('base64');
+        console.log('Login successful, generated token');
+
+        return {
+            success: true,
+            user,
+            token,
+            role: 'admin'
+        };
+    } catch (error) {
+        console.error('Admin authentication error:', error);
+        return { success: false, message: 'Error during authentication' };
+    }
+};
+
 // Test endpoint to check server status
 app.get('/api/status', (req, res) => {
   res.json({ status: 'Server is running' });
@@ -401,261 +537,210 @@ app.get('/api/test-db', async (req, res) => {
 // Modify the login endpoint to use explicit schema
 app.post('/api/login/:role', async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
-
     let { role } = req.params;
     const { student_id, faculty_id, librarian_id, admin_id, staff_id, password } = req.body;
     let connection;
-
-    console.log('Login attempt - Full request:', {
-        role,
-        body: { ...req.body, password: '[HIDDEN]' }
-    });
+    
+    console.log('Login attempt:', { role, ...req.body, password: '[HIDDEN]' });
 
     try {
-        connection = await oracledb.getConnection(dbConfig);
-        let query;
-        let params;
-        let mappedRole = role;
-
-        // Special handling for staff role
-        if (role === 'staff') {
-            const staffIdToCheck = staff_id || admin_id || librarian_id; // Try all possible ID fields
+        connection = await oracledb.getConnection(dbConfig);        // Special handling for admin login
+        if (role === 'admin') {
+            console.log('Attempting admin login with ID:', admin_id);
+            const validationResult = await handleAdminLogin(admin_id, password, connection);
             
-            if (!staffIdToCheck) {
-                return res.status(400).json({
+            if (!validationResult.success) {
+                console.log('Admin login failed:', validationResult.message);
+                return res.status(401).json({
                     success: false,
-                    message: 'Staff ID is required'
+                    message: validationResult.message
                 });
             }
 
-            // First try admin table
-            const adminResult = await connection.execute(
-                `SELECT *, 'admin' as SOURCE_TABLE FROM ADMIN WHERE ADMIN_ID = :1`,
-                [staffIdToCheck],
-                { outFormat: oracledb.OUT_FORMAT_OBJECT }
-            );
+            console.log('Admin login successful');
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                user: validationResult.user,
+                token: validationResult.token,
+                role: validationResult.role
+            });
 
-            // If not found in admin, try librarian table
-            if (adminResult.rows.length === 0) {
-                const librarianResult = await connection.execute(
-                    `SELECT *, 'librarian' as SOURCE_TABLE FROM LIBRARIAN WHERE LIBRARIAN_ID = :1`,
-                    [staffIdToCheck],
-                    { outFormat: oracledb.OUT_FORMAT_OBJECT }
-                );
-
-                if (librarianResult.rows.length > 0) {
-                    const user = librarianResult.rows[0];
-                    mappedRole = 'librarian';
-                    
-                    // Verify password
-                    const isValidPassword = await bcrypt.compare(password, user.PASSWORD);
-                    if (!isValidPassword) {
-                        return res.status(401).json({
-                            success: false,
-                            message: 'Invalid credentials'
-                        });
-                    }
-
-                    // Remove password from response
-                    delete user.PASSWORD;
-                    user.role = 'staff';
-
-                    const token = Buffer.from(`${user.EMAIL || user.LIBRARIAN_ID}:${Date.now()}`).toString('base64');
-
-                    return res.status(200).json({
-                        success: true,
-                        message: 'Login successful',
-                        user: user,
-                        token: token,
-                        role: 'staff'
-                    });
-                }
-            } else {
-                const user = adminResult.rows[0];
-                mappedRole = 'admin';
-                
-                // Verify password
-                const isValidPassword = await bcrypt.compare(password, user.ADMIN_PASSWORD);
-                if (!isValidPassword) {
-                    return res.status(401).json({
-                        success: false,
-                        message: 'Invalid credentials'
-                    });
-                }
-
-                // Remove password and map fields
-                delete user.ADMIN_PASSWORD;
-                user.EMAIL = user.ADMIN_EMAIL;
-                user.LIBRARIAN_FIRSTNAME = user.ADMIN_USERNAME;
-                user.LIBRARIAN_LASTNAME = '';
-                user.role = 'staff';
-
-                const token = Buffer.from(`${user.EMAIL || user.ADMIN_ID}:${Date.now()}`).toString('base64');
-
-                return res.status(200).json({
-                    success: true,
-                    message: 'Login successful',
-                    user: user,
-                    token: token,
-                    role: 'staff'
+            if (!adminResult.rows || adminResult.rows.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Admin ID or password'
                 });
             }
 
-            // If we get here, no user was found
-            return res.status(401).json({
-                success: false,
-                message: 'Invalid Staff ID or password'
-            });
-        }
+            const admin = adminResult.rows[0];
+            const storedPassword = admin.ADMIN_PASSWORD || admin.PASSWORD;
 
-        // Handle other roles as before
-        switch (role) {
-            case 'student':
-                query = `SELECT * FROM STUDENT WHERE STUDENT_ID = :1`;
-                params = [student_id];
-                break;
-            case 'faculty':
-                query = `SELECT * FROM FACULTY WHERE FACULTY_ID = :1`;
-                params = [faculty_id];
-                break;
-            case 'librarian':
-                query = `SELECT * FROM LIBRARIAN WHERE LIBRARIAN_ID = :1`;
-                params = [librarian_id];
-                break;
-            case 'admin':
-                query = `SELECT * FROM ADMIN WHERE ADMIN_ID = :1`;
-                params = [admin_id];
-                break;
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: 'Invalid role'
-                });
-        }
-
-        console.log('Executing query:', { query, params, mappedRole });
-
-        const result = await connection.execute(
-            query,
-            params,
-            { outFormat: oracledb.OUT_FORMAT_OBJECT }
-        );
-
-        console.log('Query result:', result.rows);
-
-        if (result.rows && result.rows.length > 0) {
-            const user = result.rows[0];
-            console.log('Found user:', { 
-                ...user,
-                PASSWORD_START: user.PASSWORD ? user.PASSWORD.substring(0, 10) : 'null',
-                PASSWORD_LENGTH: user.PASSWORD ? user.PASSWORD.length : 0,
-                IS_PASSWORD_HASHED: user.PASSWORD ? user.PASSWORD.startsWith('$2') : false
-            });
-
-            try {
-                // Log the raw password from database for debugging
-                console.log('Password from database format check:', {
-                    length: user.PASSWORD ? user.PASSWORD.length : 0,
-                    startsWithBcrypt: user.PASSWORD ? user.PASSWORD.startsWith('$2') : false,
-                    first10Chars: user.PASSWORD ? user.PASSWORD.substring(0, 10) : 'null'
-                });
-
-                // If password is not hashed, hash it and update in database
-                if (user.PASSWORD && !user.PASSWORD.startsWith('$2')) {
-                    console.log('Password is not hashed, updating with hash...');
-                    const hashedPassword = await hashPassword(user.PASSWORD);
-                    
-                    // Update the password in database
-                    await connection.execute(
-                        `UPDATE ${mappedRole.toUpperCase()} SET PASSWORD = :1 WHERE ${mappedRole.toUpperCase()}_ID = :2`,
-                        [hashedPassword, user[`${mappedRole.toUpperCase()}_ID`]]
-                    );
-                    
-                    // Use the original password for this login attempt
-                    if (password === user.PASSWORD) {
-                        user.PASSWORD = hashedPassword; // Update for next steps
-                        console.log('Plain password matched, proceeding with login');
-                    } else {
-                        console.log('Plain password did not match');
-                        return res.status(401).json({
-                            success: false,
-                            message: 'Invalid credentials'
-                        });
-                    }
-                } else {
-                    // Normal bcrypt comparison
-                    const isValidPassword = await bcrypt.compare(
-                        password, 
-                        mappedRole === 'admin' ? user.ADMIN_PASSWORD : user.PASSWORD
-                    );
-                    
-                    console.log('Bcrypt password validation result:', isValidPassword);
-
-                    if (!isValidPassword) {
-                        console.log('Password validation failed');
-                        return res.status(401).json({
-                            success: false,
-                            message: mappedRole === 'student' ? 'Invalid Student ID or password' : 
-                                    mappedRole === 'faculty' ? 'Invalid Faculty ID or password' :
-                                    mappedRole === 'librarian' ? 'Invalid Librarian ID or password' :
-                                    'Invalid Admin ID or password'
-                        });
-                    }
-                }
-            } catch (bcryptError) {
-                console.error('Error during password validation:', bcryptError);
+            if (!storedPassword) {
                 return res.status(500).json({
                     success: false,
-                    message: 'Error validating password'
+                    message: 'Admin account not properly configured'
                 });
             }
-            
-            // Remove password from response
-            if (mappedRole === 'admin') {
-                delete user.ADMIN_PASSWORD;
-                // Map admin fields to match the expected format
-                user.EMAIL = user.ADMIN_EMAIL;
-                user.LIBRARIAN_FIRSTNAME = user.ADMIN_USERNAME;
-                user.LIBRARIAN_LASTNAME = '';
-            } else {
-                delete user.PASSWORD;
-            }            // Set the role based on the mapped value
-            const responseRole = role === 'staff' ? 'staff' : mappedRole;
-            user.role = responseRole;
 
-            // Always use ID for students, email or ID for other roles
-            let tokenData;
-            if (role === 'student') {
-                tokenData = user.STUDENT_ID;
-                console.log('Creating student token with ID:', tokenData);
+            // Check if password is still in plain text
+            if (storedPassword === password) {
+                // Hash the password for future use
+                const hashedPassword = await hashPassword(password);
+                await connection.execute(
+                    `UPDATE ADMIN SET ADMIN_PASSWORD = :1 WHERE ADMIN_ID = :2`,
+                    [hashedPassword, admin_id],
+                    { autoCommit: true }
+                );
             } else {
-                tokenData = user.EMAIL || user[`${mappedRole.toUpperCase()}_ID`];
+                // Verify hashed password
+                const isValid = await bcrypt.compare(password, storedPassword);
+                if (!isValid) {
+                    return res.status(401).json({
+                        success: false,
+                        message: 'Invalid Admin ID or password'
+                    });
+                }
             }
-            const token = Buffer.from(`${tokenData}:${Date.now()}`).toString('base64');
 
-            console.log('Login successful, returning user:', { 
-                ...user, 
-                token,
-                tokenType: role === 'student' ? 'student_id' : 'email'
-            });
+            // Clean up admin object for response
+            delete admin.ADMIN_PASSWORD;
+            delete admin.PASSWORD;
+            admin.EMAIL = admin.ADMIN_EMAIL;
+            admin.role = 'admin';
+
+            const token = Buffer.from(`${admin.ADMIN_ID}:${Date.now()}`).toString('base64');
 
             return res.status(200).json({
                 success: true,
                 message: 'Login successful',
-                user: user,
+                user: admin,
                 token: token,
-                role: responseRole
+                role: 'admin'
             });
-        } else {
-            console.log('No user found with provided ID');
-            return res.status(401).json({
-                success: false,
-                message: mappedRole === 'student' ? 'Invalid Student ID or password' : 
-                        mappedRole === 'faculty' ? 'Invalid Faculty ID or password' :
-                        mappedRole === 'librarian' ? 'Invalid Librarian ID or password' :
-                        'Invalid Admin ID or password'
+        }        // Handle student login
+        if (role === 'student') {
+            console.log('Attempting student login with ID:', student_id);
+            const result = await connection.execute(
+                `SELECT * FROM Student WHERE STUDENT_ID = :1`,
+                [student_id],
+                { outFormat: oracledb.OUT_FORMAT_OBJECT }
+            );
+
+            if (!result.rows || result.rows.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Student ID or password'
+                });
+            }
+
+            const student = result.rows[0];
+            const isValid = await bcrypt.compare(password, student.PASSWORD);
+
+            if (!isValid) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Student ID or password'
+                });
+            }
+
+            delete student.PASSWORD;
+            student.role = 'student';
+            const token = Buffer.from(`${student.STUDENT_ID}:${Date.now()}`).toString('base64');
+
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                user: student,
+                token: token,
+                role: 'student'
             });
         }
+
+        // Handle faculty login
+        if (role === 'faculty') {
+            console.log('Attempting faculty login with ID:', faculty_id);
+            const result = await connection.execute(
+                `SELECT * FROM Faculty WHERE FACULTY_ID = :1`,
+                [faculty_id],
+                { outFormat: oracledb.OUT_FORMAT_OBJECT }
+            );
+
+            if (!result.rows || result.rows.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Faculty ID or password'
+                });
+            }
+
+            const faculty = result.rows[0];
+            const isValid = await bcrypt.compare(password, faculty.PASSWORD);
+
+            if (!isValid) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Faculty ID or password'
+                });
+            }
+
+            delete faculty.PASSWORD;
+            faculty.role = 'faculty';
+            const token = Buffer.from(`${faculty.FACULTY_ID}:${Date.now()}`).toString('base64');
+
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                user: faculty,
+                token: token,
+                role: 'faculty'
+            });
+        }
+
+        // Handle librarian login
+        if (role === 'librarian') {
+            console.log('Attempting librarian login with ID:', librarian_id);
+            const result = await connection.execute(
+                `SELECT * FROM Librarian WHERE LIBRARIAN_ID = :1`,
+                [librarian_id],
+                { outFormat: oracledb.OUT_FORMAT_OBJECT }
+            );
+
+            if (!result.rows || result.rows.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Librarian ID or password'
+                });
+            }
+
+            const librarian = result.rows[0];
+            const isValid = await bcrypt.compare(password, librarian.PASSWORD);
+
+            if (!isValid) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'Invalid Librarian ID or password'
+                });
+            }
+
+            delete librarian.PASSWORD;
+            librarian.role = 'librarian';
+            const token = Buffer.from(`${librarian.LIBRARIAN_ID}:${Date.now()}`).toString('base64');
+
+            return res.status(200).json({
+                success: true,
+                message: 'Login successful',
+                user: librarian,
+                token: token,
+                role: 'librarian'
+            });
+        }
+
+        // If no valid role was specified
+        return res.status(400).json({
+            success: false,
+            message: 'Invalid role specified'
+        });
+
     } catch (err) {
         console.error('Database error:', err);
         return res.status(500).json({
@@ -961,6 +1046,108 @@ app.put('/api/faculty/update', async (req, res) => {
                 success: false,
                 message: 'Database operation failed',
                 error: dbError.message
+            });
+        }
+    } catch (err) {
+        console.error('Server error:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Server error occurred',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Librarian profile update endpoint
+app.put('/api/librarian/update', async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+    let connection;
+    
+    try {
+        const {
+            librarian_id,
+            librarian_firstname,
+            librarian_lastname,
+            email
+        } = req.body;
+
+        console.log('Received librarian update request:', req.body);
+
+        if (!librarian_id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Librarian ID is required'
+            });
+        }
+
+        connection = await oracledb.getConnection(dbConfig);
+
+        // Check if email already exists for other librarians
+        const checkEmail = await connection.execute(
+            `SELECT COUNT(*) as count FROM Librarian 
+             WHERE EMAIL = :1 AND LIBRARIAN_ID != :2`,
+            [email, librarian_id],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (checkEmail.rows[0].COUNT > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email already exists'
+            });
+        }
+
+        // Update librarian information
+        const result = await connection.execute(
+            `UPDATE Librarian 
+             SET LIBRARIAN_FIRSTNAME = :1,
+                 LIBRARIAN_LASTNAME = :2,
+                 EMAIL = :3
+             WHERE LIBRARIAN_ID = :4`,
+            [
+                librarian_firstname,
+                librarian_lastname,
+                email,
+                librarian_id
+            ],
+            { autoCommit: true }
+        );
+
+        if (result.rowsAffected === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Librarian not found'
+            });
+        }
+
+        // Get updated librarian data
+        const updatedLibrarian = await connection.execute(
+            `SELECT * FROM Librarian WHERE LIBRARIAN_ID = :1`,
+            [librarian_id],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        if (updatedLibrarian.rows.length > 0) {
+            const librarian = updatedLibrarian.rows[0];
+            delete librarian.PASSWORD;
+
+            return res.status(200).json({
+                success: true,
+                message: 'Profile updated successfully',
+                user: librarian
+            });
+        } else {
+            return res.status(404).json({
+                success: false,
+                message: 'Failed to retrieve updated profile'
             });
         }
     } catch (err) {
@@ -1809,6 +1996,287 @@ app.put('/api/librarian/room-reservations/:id/status', async (req, res) => {
       }
     }
   }
+});
+
+// Add a diagnostic endpoint to check admin table
+app.get('/api/check-admin-table', async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        
+        // Check table structure
+        const schema = await connection.execute(
+            `SELECT COLUMN_NAME, DATA_TYPE, NULLABLE 
+             FROM ALL_TAB_COLUMNS 
+             WHERE TABLE_NAME = 'ADMIN' 
+             AND OWNER = 'SYSTEM'`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+        
+        // Check for any admin records
+        const records = await connection.execute(
+            `SELECT ADMIN_ID, ADMIN_EMAIL 
+             FROM ADMIN`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        res.json({
+            success: true,
+            schema: schema.rows,
+            recordCount: records.rows ? records.rows.length : 0,
+            sampleRecord: records.rows && records.rows.length > 0 ? 
+                {
+                    id: records.rows[0].ADMIN_ID,
+                    hasEmail: !!records.rows[0].ADMIN_EMAIL
+                } : null
+        });
+    } catch (err) {
+        console.error('Error checking admin table:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking admin table',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Delete endpoints for admin operations
+app.delete('/api/admin/delete-student/:id', async (req, res) => {
+    let connection;
+    try {
+        const studentId = req.params.id;
+        connection = await oracledb.getConnection(dbConfig);
+
+        const result = await connection.execute(
+            `DELETE FROM Student WHERE STUDENT_ID = :1`,
+            [studentId],
+            { autoCommit: true }
+        );
+
+        if (result.rowsAffected > 0) {
+            res.json({
+                success: true,
+                message: 'Student deleted successfully'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Student not found'
+            });
+        }
+    } catch (err) {
+        console.error('Delete student error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete student',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+app.delete('/api/admin/delete-faculty/:id', async (req, res) => {
+    let connection;
+    try {
+        const facultyId = req.params.id;
+        connection = await oracledb.getConnection(dbConfig);
+
+        const result = await connection.execute(
+            `DELETE FROM Faculty WHERE FACULTY_ID = :1`,
+            [facultyId],
+            { autoCommit: true }
+        );
+
+        if (result.rowsAffected > 0) {
+            res.json({
+                success: true,
+                message: 'Faculty member deleted successfully'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Faculty member not found'
+            });
+        }
+    } catch (err) {
+        console.error('Delete faculty error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete faculty member',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+app.delete('/api/admin/delete-librarian/:id', async (req, res) => {
+    let connection;
+    try {
+        const librarianId = req.params.id;
+        connection = await oracledb.getConnection(dbConfig);
+
+        const result = await connection.execute(
+            `DELETE FROM Librarian WHERE LIBRARIAN_ID = :1`,
+            [librarianId],
+            { autoCommit: true }
+        );
+
+        if (result.rowsAffected > 0) {
+            res.json({
+                success: true,
+                message: 'Librarian deleted successfully'
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: 'Librarian not found'
+            });
+        }
+    } catch (err) {
+        console.error('Delete librarian error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete librarian',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Get all students
+app.get('/api/students', async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const result = await connection.execute(
+            `SELECT * FROM Student`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        res.json({
+            success: true,
+            students: result.rows
+        });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch students',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Get all faculty members
+app.get('/api/faculty', async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const result = await connection.execute(
+            `SELECT * FROM Faculty`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        res.json({
+            success: true,
+            faculty: result.rows
+        });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch faculty members',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
+});
+
+// Get all librarians
+app.get('/api/librarians', async (req, res) => {
+    let connection;
+    try {
+        connection = await oracledb.getConnection(dbConfig);
+        const result = await connection.execute(
+            `SELECT * FROM Librarian`,
+            [],
+            { outFormat: oracledb.OUT_FORMAT_OBJECT }
+        );
+
+        // Remove sensitive information
+        const librarians = result.rows.map(librarian => {
+            const { PASSWORD, ...librarianWithoutPassword } = librarian;
+            return librarianWithoutPassword;
+        });
+
+        res.json({
+            success: true,
+            librarians: librarians
+        });
+    } catch (err) {
+        console.error('Database error:', err);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch librarians',
+            error: err.message
+        });
+    } finally {
+        if (connection) {
+            try {
+                await connection.close();
+            } catch (err) {
+                console.error('Error closing connection:', err);
+            }
+        }
+    }
 });
 
 // Start the server

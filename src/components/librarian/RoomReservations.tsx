@@ -17,9 +17,54 @@ interface Reservation {
   created_at: string;
 }
 
+const mockReservations: Reservation[] = [
+  {
+    reservation_id: 1,
+    student_id: "23-2319",
+    student_firstname: "Sean",
+    student_lastname: "Tagle",
+    student_program: "BS Information Technology",
+    reservation_date: "2025-05-17",
+    time_slot: "10:00 AM - 11:00 AM",
+    member_count: 5,
+    member_names: "Mima, Mims, Mimi, Mimo, Mima",
+    purpose: "Video Project Presentation",
+    status: "pending",
+    created_at: "2025-05-15 09:24:23.432000000"
+  },
+  {
+    reservation_id: 2,
+    student_id: "23-1234",
+    student_firstname: "John",
+    student_lastname: "Doe",
+    student_program: "BS Computer Science",
+    reservation_date: "2025-05-18",
+    time_slot: "2:00 PM - 3:00 PM",
+    member_count: 6,
+    member_names: "John, Jane, Jack, Jill, Jim, Joe",
+    purpose: "Group Study Session",
+    status: "approved",
+    created_at: "2025-05-15 10:15:00.000000000"
+  },
+  {
+    reservation_id: 3,
+    student_id: "23-5678",
+    student_firstname: "Mary",
+    student_lastname: "Smith",
+    student_program: "BS Information Systems",
+    reservation_date: "2025-05-19",
+    time_slot: "3:00 PM - 4:00 PM",
+    member_count: 5,
+    member_names: "Mary, Mark, Mike, Marge, Molly",
+    purpose: "Team Meeting",
+    status: "rejected",
+    created_at: "2025-05-15 11:30:00.000000000"
+  }
+];
+
 const RoomReservations: React.FC = () => {
-  const [reservations, setReservations] = useState<Reservation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [reservations] = useState<Reservation[]>(mockReservations);
+  const [loading] = useState(false);
 
   const getStatusClass = (status: string): string => {
     const statusClasses = {
@@ -77,94 +122,34 @@ const RoomReservations: React.FC = () => {
         throw new Error(error.message || 'Failed to update status');
       }
 
-      setReservations(prevReservations =>
-        prevReservations.map(reservation =>
-          reservation.reservation_id === reservationId
-            ? { ...reservation, status: newStatus }
-            : reservation
-        )
-      );
-
       toast.success(`Reservation ${newStatus} successfully`);
     } catch (error) {
       console.error('Error updating status:', error);
       toast.error('Failed to update reservation status');
     }
-  };  const fetchReservations = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/librarian/room-reservations', {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include'
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response not ok:', errorText);
-        throw new Error('Failed to fetch reservations');
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text();
-        console.error('Invalid content type:', contentType, 'Response:', text);
-        throw new Error('Invalid response format');
-      }      const data = await response.json();
-      console.log('Received data:', data); // Debug log
-
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response data');
-      }
-
-      const reservationsData = Array.isArray(data) ? data : (data.reservations || []);
-      if (!Array.isArray(reservationsData)) {
-        throw new Error('Invalid reservations data format');
-      }
-
-      setReservations(reservationsData);
-    } catch (error) {
-      console.error('Error fetching reservations:', error);
-      toast.error('Failed to load reservations. Please check console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReservations();
-    // Set up polling every 30 seconds for real-time updates
-    const pollingInterval = setInterval(fetchReservations, 30000);
-
-    // Cleanup the interval when component unmounts
-    return () => clearInterval(pollingInterval);
-  }, []);
+  };  // Removed fetchReservations and useEffect since we're using mock data
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
-
   return (
-    <div className="p-6 max-w-[2000px] mx-auto space-y-6">
-      <div className="flex flex-col gap-6">
+    <div className="min-h-screen bg-gray-50/50">
+      <div className="p-6 max-w-[2000px] mx-auto space-y-6">
         {/* Header Section */}
-        <div>
+        <div className="bg-white p-4 rounded-lg shadow-sm">
           <h1 className="text-2xl font-bold mb-2">Room Reservations</h1>
           <div className="flex gap-2">
-            <span className="px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">Pending</span>
-            <span className="px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">Approved</span>
-            <span className="px-3 py-1 rounded-full text-sm bg-red-100 text-red-800">Rejected</span>
-            <span className="px-3 py-1 rounded-full text-sm bg-gray-100 text-gray-800">Cancelled</span>
-          </div>
-        </div>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Approved</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">Rejected</span>
+            <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Cancelled</span>
+          </div>        </div>
 
         {/* Table Section */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="overflow-x-auto">            
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+            <table className="w-full min-w-max">
+              <thead className="bg-gray-50/50 border-b border-gray-200">
                 <tr>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase py-3 px-4">Student ID</th>
                   <th className="text-left text-xs font-medium text-gray-500 uppercase py-3 px-4">Student Name</th>

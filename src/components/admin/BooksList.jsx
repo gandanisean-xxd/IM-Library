@@ -1,11 +1,96 @@
 import React, { useState } from 'react';
-import { Search, Plus, Edit, Trash2, BookOpen } from 'lucide-react';
-import { books } from '../../mockData';
+import { Search, Plus, Edit, Trash2, BookOpen, X } from 'lucide-react';
+import { books as initialBooks } from '../../mockData';
 
 const BooksList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);                      
+  const [books, setBooks] = useState(initialBooks);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [editingBook, setEditingBook] = useState(null);
+  const [newBook, setNewBook] = useState({
+    id: '',
+    name: '',
+    author: '',
+    quantity: '',
+    available: '',
+    category: '',
+    campusAvailability: '',
+    cover: ''
+  });
   
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewBook(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'quantity' ? { available: value } : {}) // Set available = quantity when quantity changes
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    // Add the new book to the books array
+    const bookToAdd = {
+      ...newBook,
+      quantity: parseInt(newBook.quantity),
+      available: parseInt(newBook.quantity)
+    };
+    
+    setBooks(prevBooks => [...prevBooks, bookToAdd]);
+    setShowAddModal(false);
+    // Reset form
+    setNewBook({
+      id: '',
+      name: '',
+      author: '',
+      quantity: '',
+      available: '',
+      category: '',
+      campusAvailability: '',
+      cover: ''
+    });
+  };
+
+  const handleDelete = (book) => {
+    setSelectedBook(book);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    setBooks(prevBooks => prevBooks.filter(b => b.id !== selectedBook.id));
+    setShowDeleteModal(false);
+    setSelectedBook(null);
+  };
+
+  const handleEditClick = (book) => {
+    setEditingBook(book);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    setBooks(prevBooks => 
+      prevBooks.map(book => 
+        book.id === editingBook.id ? editingBook : book
+      )
+    );
+    setShowEditModal(false);
+    setEditingBook(null);
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingBook(prev => ({
+      ...prev,
+      [name]: value,
+      ...(name === 'quantity' ? { available: parseInt(value) } : {})
+    }));
+  };
+
   // Get unique categories for filter
   const categories = [...new Set(books.map(book => book.category))];
   
@@ -30,11 +115,287 @@ const BooksList = () => {
           <p className="text-gray-600">Manage your library's book collection</p>
         </div>
         
-        <button className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200">
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
+        >
           <Plus className="h-5 w-5 mr-2" />
           Add New Book
         </button>
       </div>
+
+      {/* Add Book Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Add New Book</h2>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Book ID</label>
+                  <input
+                    type="text"
+                    name="id"
+                    value={newBook.id}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={newBook.name}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                  <input
+                    type="text"
+                    name="author"
+                    value={newBook.author}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={newBook.quantity}
+                    onChange={handleInputChange}
+                    min="1"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    name="category"
+                    value={newBook.category}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Campus</label>
+                  <select
+                    name="campusAvailability"
+                    value={newBook.campusAvailability}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >    
+                    <option value="">Select Campus</option>
+                    <option value="San Bartolome">San Bartolome Campus</option>
+                    <option value="Batasan">Batasan Campus</option>
+                    <option value="San Francisco">San Francisco Campus</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image URL (Optional)</label>
+                  <input
+                    type="url"
+                    name="cover"
+                    value={newBook.cover}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/book-cover.jpg"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Add Book
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Book Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Edit Book</h2>
+              <button onClick={() => {
+                setShowEditModal(false);
+                setEditingBook(null);
+              }} className="text-gray-500 hover:text-gray-700">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Book ID</label>
+                  <input
+                    type="text"
+                    name="id"
+                    value={editingBook.id}
+                    className="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                    disabled
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={editingBook.name}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Author</label>
+                  <input
+                    type="text"
+                    name="author"
+                    value={editingBook.author}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />                
+                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={editingBook.quantity}
+                    onChange={handleEditInputChange}
+                    min="1"
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                  <select
+                    name="category"
+                    value={editingBook.category}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(category => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Campus</label>
+                  <select
+                    name="campusAvailability"
+                    value={editingBook.campusAvailability}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >    
+                    <option value="">Select Campus</option>
+                    <option value="San Bartolome">San Bartolome Campus</option>
+                    <option value="Batasan">Batasan Campus</option>
+                    <option value="San Francisco">San Francisco Campus</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Cover Image URL (Optional)</label>
+                  <input
+                    type="url"
+                    name="cover"
+                    value={editingBook.cover}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://example.com/book-cover.jpg"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingBook(null);
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+            <h2 className="text-xl font-bold mb-4">Confirm Delete</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "{selectedBook.name}"? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Search and filter bar */}
       <div className="bg-white rounded-xl p-4 shadow-md">
@@ -137,10 +498,10 @@ const BooksList = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <button className="text-blue-600 hover:text-blue-900">
+                      <button onClick={() => handleEditClick(book)} className="text-blue-600 hover:text-blue-900">
                         <Edit className="h-5 w-5" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button onClick={() => handleDelete(book)} className="text-red-600 hover:text-red-900">
                         <Trash2 className="h-5 w-5" />
                       </button>
                     </div>

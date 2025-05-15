@@ -9,11 +9,14 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
   const { currentUser } = useAuth();
-
   // Get user's full name with null checks and default values
   const userFullName = React.useMemo(() => {
     if (!currentUser) return '';
     
+    if (currentUser.role === 'admin') {
+      return 'Administrator';
+    }
+
     if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
       return `${currentUser.STUDENT_FIRSTNAME} ${currentUser.STUDENT_LASTNAME}`;
     }
@@ -28,11 +31,14 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar, title }) => {
     
     return '';
   }, [currentUser]);
-
   // Get user initials with null checks
   const userInitials = React.useMemo(() => {
     if (!currentUser) return '';
     
+    if (currentUser.role === 'admin') {
+      return 'AD';
+    }
+
     if (currentUser.STUDENT_FIRSTNAME && currentUser.STUDENT_LASTNAME) {
       return `${currentUser.STUDENT_FIRSTNAME.charAt(0)}${currentUser.STUDENT_LASTNAME.charAt(0)}`;
     }
