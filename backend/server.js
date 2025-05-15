@@ -30,13 +30,13 @@ app.use((err, req, res, next) => {
 
 // Database configuration
 const dbConfig = {
-    user: "jorgi",            
-    password: "12345",        
+    user: "system",            
+    password: "taglesean",        
     connectString: "localhost:1521/XE"  // Changed to default Oracle XE service name
 };
 
 // Enable Thick mode by pointing to your Instant Client folder
-oracledb.initOracleClient({ libDir: "C:\\oraclexe\\instantclient_23_7" });
+oracledb.initOracleClient({ libDir: "C:\\oracle\\instantclient_23_7" });
 
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 
@@ -59,15 +59,15 @@ async function testConnection() {
         const result = await connection.execute(
             `SELECT table_name 
              FROM all_tables 
-             WHERE owner = :1 AND table_name = 'STUDENT'`,
-            ['JORGI'],
+             WHERE owner = 'SYSTEM' AND table_name = 'STUDENT'`,
+            [],
             { outFormat: oracledb.OUT_FORMAT_OBJECT }
         );
         console.log('Available tables:', result.rows);
         
         if (result.rows && result.rows.length > 0) {
             const students = await connection.execute(
-                `SELECT COUNT(*) as count FROM JORGI.STUDENT`,
+                `SELECT COUNT(*) as count FROM STUDENT`,
                 [],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
             );
@@ -215,7 +215,7 @@ app.post('/api/register/student', async (req, res) => {
                 STUDENT_ID,
                 STUDENT_LASTNAME,
                 STUDENT_FIRSTNAME,
-                STUDENT_PROGRAM,
+                PROGRAM,
                 STUDENT_CAMPUS,
                 EXPECTED_GRADUATEYEAR,
                 STATUS,
@@ -430,7 +430,7 @@ app.post('/api/login/:role', async (req, res) => {
 
             // First try admin table
             const adminResult = await connection.execute(
-                `SELECT *, 'admin' as SOURCE_TABLE FROM JORGI.ADMIN WHERE ADMIN_ID = :1`,
+                `SELECT *, 'admin' as SOURCE_TABLE FROM ADMIN WHERE ADMIN_ID = :1`,
                 [staffIdToCheck],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
             );
@@ -438,7 +438,7 @@ app.post('/api/login/:role', async (req, res) => {
             // If not found in admin, try librarian table
             if (adminResult.rows.length === 0) {
                 const librarianResult = await connection.execute(
-                    `SELECT *, 'librarian' as SOURCE_TABLE FROM JORGI.LIBRARIAN WHERE LIBRARIAN_ID = :1`,
+                    `SELECT *, 'librarian' as SOURCE_TABLE FROM LIBRARIAN WHERE LIBRARIAN_ID = :1`,
                     [staffIdToCheck],
                     { outFormat: oracledb.OUT_FORMAT_OBJECT }
                 );
@@ -511,19 +511,19 @@ app.post('/api/login/:role', async (req, res) => {
         // Handle other roles as before
         switch (role) {
             case 'student':
-                query = `SELECT * FROM JORGI.STUDENT WHERE STUDENT_ID = :1`;
+                query = `SELECT * FROM STUDENT WHERE STUDENT_ID = :1`;
                 params = [student_id];
                 break;
             case 'faculty':
-                query = `SELECT * FROM JORGI.FACULTY WHERE FACULTY_ID = :1`;
+                query = `SELECT * FROM FACULTY WHERE FACULTY_ID = :1`;
                 params = [faculty_id];
                 break;
             case 'librarian':
-                query = `SELECT * FROM JORGI.LIBRARIAN WHERE LIBRARIAN_ID = :1`;
+                query = `SELECT * FROM LIBRARIAN WHERE LIBRARIAN_ID = :1`;
                 params = [librarian_id];
                 break;
             case 'admin':
-                query = `SELECT * FROM JORGI.ADMIN WHERE ADMIN_ID = :1`;
+                query = `SELECT * FROM ADMIN WHERE ADMIN_ID = :1`;
                 params = [admin_id];
                 break;
             default:
@@ -619,15 +619,25 @@ app.post('/api/login/:role', async (req, res) => {
                 user.LIBRARIAN_LASTNAME = '';
             } else {
                 delete user.PASSWORD;
-            }
-
-            // Set the role based on the mapped value
+            }            // Set the role based on the mapped value
             const responseRole = role === 'staff' ? 'staff' : mappedRole;
             user.role = responseRole;
 
-            const token = Buffer.from(`${user.EMAIL || user[`${mappedRole.toUpperCase()}_ID`]}:${Date.now()}`).toString('base64');
+            // Always use ID for students, email or ID for other roles
+            let tokenData;
+            if (role === 'student') {
+                tokenData = user.STUDENT_ID;
+                console.log('Creating student token with ID:', tokenData);
+            } else {
+                tokenData = user.EMAIL || user[`${mappedRole.toUpperCase()}_ID`];
+            }
+            const token = Buffer.from(`${tokenData}:${Date.now()}`).toString('base64');
 
-            console.log('Login successful, returning user:', { ...user, token });
+            console.log('Login successful, returning user:', { 
+                ...user, 
+                token,
+                tokenType: role === 'student' ? 'student_id' : 'email'
+            });
 
             return res.status(200).json({
                 success: true,
@@ -763,7 +773,7 @@ app.put('/api/student/update', async (req, res) => {
         try {
             // Check if email already exists for other students
             const checkEmail = await connection.execute(
-                `SELECT COUNT(*) as count FROM JORGI.Student 
+                `SELECT COUNT(*) as count FROM Student 
                  WHERE EMAIL = :1 AND STUDENT_ID != :2`,
                 [email, student_id],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -778,7 +788,7 @@ app.put('/api/student/update', async (req, res) => {
 
             // Update student information
             const result = await connection.execute(
-                `UPDATE JORGI.Student 
+                `UPDATE Student 
                  SET STUDENT_FIRSTNAME = :1,
                      STUDENT_LASTNAME = :2,
                      EMAIL = :3,
@@ -805,7 +815,7 @@ app.put('/api/student/update', async (req, res) => {
 
             // Get updated student data
             const updatedStudent = await connection.execute(
-                `SELECT * FROM JORGI.Student WHERE STUDENT_ID = :1`,
+                `SELECT * FROM Student WHERE STUDENT_ID = :1`,
                 [student_id],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
             );
@@ -887,7 +897,7 @@ app.put('/api/faculty/update', async (req, res) => {
         try {
             // Check if email already exists for other faculty members
             const checkEmail = await connection.execute(
-                `SELECT COUNT(*) as count FROM JORGI.Faculty 
+                `SELECT COUNT(*) as count FROM Faculty 
                  WHERE EMAIL = :1 AND FACULTY_ID != :2`,
                 [email, faculty_id],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
@@ -902,7 +912,7 @@ app.put('/api/faculty/update', async (req, res) => {
 
             // Update faculty information
             const result = await connection.execute(
-                `UPDATE JORGI.Faculty 
+                `UPDATE Faculty 
                  SET FACULTY_FIRSTNAME = :1,
                      FACULTY_LASTNAME = :2,
                      EMAIL = :3
@@ -925,7 +935,7 @@ app.put('/api/faculty/update', async (req, res) => {
 
             // Get updated faculty data
             const updatedFaculty = await connection.execute(
-                `SELECT * FROM JORGI.Faculty WHERE FACULTY_ID = :1`,
+                `SELECT * FROM Faculty WHERE FACULTY_ID = :1`,
                 [faculty_id],
                 { outFormat: oracledb.OUT_FORMAT_OBJECT }
             );
@@ -1070,7 +1080,7 @@ app.post('/api/librarian/reset-password', async (req, res) => {
         connection = await oracledb.getConnection(dbConfig);
 
         const result = await connection.execute(
-            `UPDATE JORGI.LIBRARIAN SET PASSWORD = :1 WHERE LIBRARIAN_ID = :2`,
+            `UPDATE LIBRARIAN SET PASSWORD = :1 WHERE LIBRARIAN_ID = :2`,
             [hashedPassword, librarian_id]
         );
 
@@ -1105,7 +1115,716 @@ app.post('/api/librarian/reset-password', async (req, res) => {
     }
 });
 
+// Add this middleware to get student ID from token
+const getStudentFromToken = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authorization header missing or invalid format'
+    });
+  }
+
+  try {
+    // Remove 'Bearer ' prefix and get the token
+    const token = authHeader.split(' ')[1];
+    console.log('Received token:', token);
+
+    const decoded = Buffer.from(token, 'base64').toString().split(':')[0];
+    console.log('Decoded token data:', decoded);
+      // Validate student ID format (xx-xxxx)
+    if (!/^\d{2}-\d{4}$/.test(decoded)) {
+      console.log('Invalid student ID format:', decoded);
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid student ID format. Expected format: xx-xxxx'
+      });
+    }
+
+    req.studentId = decoded;
+    next();
+  } catch (err) {
+    console.error('Token decode error:', err);
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid authorization token'
+    });
+  }
+};
+
+app.get('/api/reservations', getStudentFromToken, async (req, res) => {
+  let connection;
+  try {
+    connection = await oracledb.getConnection(dbConfig);
+
+    const result = await connection.execute(
+      `SELECT * FROM ROOM_RESERVATIONS 
+       WHERE STUDENT_ID = :1 
+       ORDER BY RESERVATION_DATE DESC, TIME_SLOT DESC`,
+      [req.studentId],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    res.json({
+      success: true,
+      reservations: result.rows
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reservations',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+// Update the reservations endpoint to use the middleware
+app.post('/api/reservations', getStudentFromToken, async (req, res) => {
+  let connection;
+  try {
+    const {
+      program,
+      date,
+      timeSlot,
+      memberCount,
+      memberNames,
+      purpose
+    } = req.body;    // Validate required fields
+    if (!program || !date || !timeSlot || !memberCount || !memberNames || !purpose) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Validate member count
+    const memberCountNum = parseInt(memberCount);
+    if (isNaN(memberCountNum) || memberCountNum < 5 || memberCountNum > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member count must be between 5 and 10'
+      });
+    }
+
+    // Convert member names array to string and validate length
+    const memberNamesString = Array.isArray(memberNames) ? memberNames.join(', ') : memberNames;
+    if (!memberNamesString || memberNamesString.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member names are required'
+      });
+    }
+    if (memberNamesString.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member names exceed maximum length of 500 characters'
+      });
+    }
+
+    connection = await oracledb.getConnection(dbConfig);
+    
+    // First verify that the student exists
+    const studentCheck = await connection.execute(
+      `SELECT COUNT(*) as count FROM STUDENT WHERE STUDENT_ID = :1`,
+      [req.studentId],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (studentCheck.rows[0].COUNT === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student ID not found. Please make sure you are logged in with a valid student account.'
+      });
+    }
+      // Validate and parse the date
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format'
+      });
+    }
+
+    // Format date in YYYY-MM-DD format for consistency
+    const formattedDate = dateObj.toISOString().split('T')[0];
+
+    // Validate time slot format (e.g., "9:00 AM - 10:00 AM")
+    const timeSlotPattern = /^(1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM) - (1[0-2]|0?[1-9]):[0-5][0-9] (AM|PM)$/;
+    if (!timeSlotPattern.test(timeSlot)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid time slot format. Expected format: "HH:MM AM/PM - HH:MM AM/PM"'
+      });
+    }
+
+    // Check if time slot is available
+    const checkSlot = await connection.execute(
+      `SELECT COUNT(*) as count 
+       FROM ROOM_RESERVATIONS 
+       WHERE RESERVATION_DATE = TO_DATE(:1, 'YYYY-MM-DD')
+       AND TIME_SLOT = :2
+       AND STATUS = 'approved'`,
+      [formattedDate, timeSlot],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (checkSlot.rows[0].COUNT > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This time slot is already booked'
+      });
+    }
+      // Set initial status to pending
+    const status = 'pending';
+    
+    console.log('Debug - Student ID from token:', req.studentId);
+    console.log('Debug - Request data:', {
+      studentId: req.studentId,
+      program,
+      date: formattedDate,
+      timeSlot,
+      memberCount: memberCountNum
+    });    // Insert the reservation using the student ID from the token
+    await connection.execute(
+      `INSERT INTO ROOM_RESERVATIONS (
+        STUDENT_ID,
+        PROGRAM,
+        RESERVATION_DATE,
+        TIME_SLOT,
+        MEMBER_COUNT,
+        MEMBER_NAMES,
+        PURPOSE,
+        STATUS
+      ) VALUES (
+        :1,
+        :2,
+        TO_DATE(:3, 'YYYY-MM-DD'),
+        :4,
+        :5,
+        :6,
+        :7,
+        :8
+      )`,
+      [
+        req.studentId,     // VARCHAR2(10)
+        program,          // VARCHAR2(100)
+        formattedDate,    // DATE
+        timeSlot,         // VARCHAR2(50)
+        memberCountNum,   // NUMBER
+        memberNamesString.substring(0, 4000), // CLOB
+        purpose,          // CLOB
+        status           // VARCHAR2(20)
+      ],
+      { autoCommit: true }
+    );
+
+    res.status(201).json({
+      success: true,
+      message: 'Reservation submitted successfully'
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit reservation',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+app.delete('/api/reservations/:reservationId', getStudentFromToken, async (req, res) => {
+  let connection;
+  try {
+    const { reservationId } = req.params;
+    
+    connection = await oracledb.getConnection(dbConfig);
+
+    // Verify the reservation belongs to this student
+    const checkOwnership = await connection.execute(
+      `SELECT COUNT(*) as count 
+       FROM ROOM_RESERVATIONS 
+       WHERE RESERVATION_ID = :1 
+       AND STUDENT_ID = :2`,
+      [reservationId, req.studentId],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (checkOwnership.rows[0].COUNT === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to cancel this reservation'
+      });
+    }
+
+    // Cancel the reservation
+    const result = await connection.execute(
+      `UPDATE ROOM_RESERVATIONS 
+       SET STATUS = 'cancelled' 
+       WHERE RESERVATION_ID = :1`,
+      [reservationId],
+      { autoCommit: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Reservation cancelled successfully'
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel reservation',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+// Room reservation endpoints
+app.post('/api/room-reservations', async (req, res) => {
+  let connection;
+  try {
+    const { 
+      student_id, 
+      program, 
+      reservation_date, 
+      time_slot, 
+      member_count, 
+      member_names, 
+      purpose 
+    } = req.body;
+
+    // Validate required fields
+    if (!student_id || !program || !reservation_date || !time_slot || !member_count || !member_names || !purpose) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Validate member count (5-10 members)
+    const memberCountNum = parseInt(member_count);
+    if (isNaN(memberCountNum) || memberCountNum < 5 || memberCountNum > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member count must be between 5 and 10'
+      });
+    }
+
+    // Convert member names array to string if needed and validate length
+    const memberNamesString = Array.isArray(member_names) ? member_names.join(', ') : member_names;
+    if (memberNamesString.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member names exceed maximum length of 500 characters'
+      });
+    }
+
+    // Initial status is always 'pending'
+    const status = 'pending';
+
+    connection = await oracledb.getConnection(dbConfig);
+
+    // Check if student exists
+    const studentCheck = await connection.execute(
+      `SELECT COUNT(*) as count FROM STUDENT WHERE STUDENT_ID = :1`,
+      [student_id],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (studentCheck.rows[0].COUNT === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student ID not found'
+      });
+    }
+
+    // Check if the time slot is already booked
+    const timeSlotCheck = await connection.execute(
+      `SELECT COUNT(*) as count 
+       FROM ROOM_RESERVATIONS 
+       WHERE RESERVATION_DATE = TO_DATE(:1, 'YYYY-MM-DD')
+       AND TIME_SLOT = :2
+       AND STATUS = 'approved'`,
+      [reservation_date, time_slot],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (timeSlotCheck.rows[0].COUNT > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'This time slot is already booked for the selected date'
+      });
+    }
+
+    // Create the reservation
+    const result = await connection.execute(
+      `INSERT INTO ROOM_RESERVATIONS (
+        STUDENT_ID,
+        PROGRAM,
+        RESERVATION_DATE,
+        TIME_SLOT,
+        MEMBER_COUNT,
+        MEMBER_NAMES,
+        PURPOSE,
+        STATUS
+      ) VALUES (
+        :student_id,
+        :program,
+        TO_DATE(:reservation_date, 'YYYY-MM-DD'),
+        :time_slot,
+        :member_count,
+        :member_names,
+        :purpose,
+        :status
+      ) RETURNING RESERVATION_ID INTO :reservation_id`,
+      {
+        student_id,
+        program,
+        reservation_date,
+        time_slot,
+        member_count,
+        member_names,
+        purpose,
+        status,
+        reservation_id: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }
+      }
+    );
+
+    await connection.commit();
+
+    res.status(201).json({
+      success: true,
+      message: 'Room reservation created successfully',
+      reservation_id: result.outBinds.reservation_id[0]
+    });
+
+  } catch (err) {
+    console.error('Error creating room reservation:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create room reservation',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+// Get all room reservations (for librarian)
+app.get('/api/librarian/room-reservations', async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  let connection;
+  try {
+    connection = await oracledb.getConnection(dbConfig);
+    const result = await connection.execute(      `SELECT 
+        r.RESERVATION_ID,
+        r.STUDENT_ID,
+        s.STUDENT_FIRSTNAME,
+        s.STUDENT_LASTNAME,
+        s.STUDENT_PROGRAM,
+        r.PROGRAM,
+        TO_CHAR(r.RESERVATION_DATE, 'YYYY-MM-DD') as RESERVATION_DATE,
+        r.TIME_SLOT,
+        r.MEMBER_COUNT,
+        r.MEMBER_NAMES,
+        r.PURPOSE,
+        r.STATUS,
+        TO_CHAR(r.CREATED_AT, 'YYYY-MM-DD HH24:MI:SS') as CREATED_AT
+      FROM ROOM_RESERVATIONS r
+      JOIN STUDENT s ON r.STUDENT_ID = s.STUDENT_ID
+      ORDER BY r.CREATED_AT DESC`,
+      [],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    res.json({
+      success: true,
+      reservations: result.rows
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reservations',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+// Update reservation status (for librarian)
+app.put('/api/librarian/room-reservations/:reservationId', async (req, res) => {
+  let connection;
+  try {
+    const { reservationId } = req.params;
+    const { status } = req.body;
+
+    if (!['approved', 'cancelled'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status value'
+      });
+    }
+
+    connection = await oracledb.getConnection(dbConfig);
+
+    const result = await connection.execute(
+      `UPDATE ROOM_RESERVATIONS 
+       SET STATUS = :1,
+           UPDATED_AT = SYSTIMESTAMP
+       WHERE RESERVATION_ID = :2`,
+      [status, reservationId]
+    );
+
+    await connection.commit();
+
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Reservation ${status} successfully`
+    });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update reservation status',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+app.post('/api/room-reservations', async (req, res) => {
+  let connection;
+  try {
+    const { 
+      student_id, 
+      program, 
+      reservation_date, 
+      time_slot, 
+      member_count, 
+      member_names, 
+      purpose 
+    } = req.body;
+
+    // Validate member count (5-10 members)
+    if (member_count < 5 || member_count > 10) {
+      return res.status(400).json({
+        success: false,
+        message: 'Member count must be between 5 and 10'
+      });
+    }
+
+    // Initial status is always 'pending'
+    const status = 'pending';
+
+    connection = await oracledb.getConnection(dbConfig);
+
+    // Use RETURNING clause to get the new reservation ID
+    const result = await connection.execute(
+      `INSERT INTO ROOM_RESERVATIONS (
+        STUDENT_ID,
+        PROGRAM,
+        RESERVATION_DATE,
+        TIME_SLOT,
+        MEMBER_COUNT,
+        MEMBER_NAMES,
+        PURPOSE,
+        STATUS
+      ) VALUES (
+        :student_id,
+        :program,
+        TO_DATE(:reservation_date, 'YYYY-MM-DD'),
+        :time_slot,
+        :member_count,
+        :member_names,
+        :purpose,
+        :status
+      ) RETURNING RESERVATION_ID INTO :reservation_id`,
+      {
+        student_id,
+        program,
+        reservation_date,
+        time_slot,
+        member_count,
+        member_names,
+        purpose,
+        status,
+        reservation_id: { type: oracledb.NUMBER, dir: oracledb.BIND_OUT }
+      }
+    );
+
+    await connection.commit();
+
+    res.json({
+      success: true,
+      message: 'Room reservation created successfully',
+      reservation_id: result.outBinds.reservation_id[0]
+    });
+
+  } catch (err) {
+    console.error('Error creating room reservation:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create room reservation',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
+app.put('/api/librarian/room-reservations/:id/status', async (req, res) => {
+  let connection;
+  try {
+    const { status } = req.body;
+    const { id } = req.params;
+
+    // Validate status values
+    const validStatuses = ['pending', 'approved', 'rejected', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}`
+      });
+    }
+
+    connection = await oracledb.getConnection(dbConfig);
+
+    // Check if the reservation exists and get its current status
+    const checkReservation = await connection.execute(
+      `SELECT STATUS FROM ROOM_RESERVATIONS WHERE RESERVATION_ID = :1`,
+      [id],
+      { outFormat: oracledb.OUT_FORMAT_OBJECT }
+    );
+
+    if (checkReservation.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation not found'
+      });
+    }
+
+    // Don't allow changing status of cancelled reservations
+    if (checkReservation.rows[0].STATUS === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot modify a cancelled reservation'
+      });
+    }
+
+    // Update the reservation status
+    const result = await connection.execute(
+      `UPDATE ROOM_RESERVATIONS 
+       SET STATUS = :1,
+           UPDATED_AT = SYSTIMESTAMP
+       WHERE RESERVATION_ID = :2`,
+      [status, id]
+    );
+
+    await connection.commit();
+
+    if (result.rowsAffected === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservation not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `Reservation ${status} successfully`
+    });
+
+  } catch (err) {
+    console.error('Error updating reservation status:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update reservation status',
+      error: err.message
+    });
+  } finally {
+    if (connection) {
+      try {
+        await connection.close();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+  }
+});
+
 // Start the server
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    console.clear();
+    console.log('\x1b[32m%s\x1b[0m', '🚀 Server started successfully!');
+    console.log('\x1b[36m%s\x1b[0m', `📡 Server is running on http://localhost:${port}`);
+    console.log('\x1b[33m%s\x1b[0m', '💡 Press Ctrl+C to stop the server');
+    console.log('----------------------------------------');
 });
+
+// Handle process termination
+process.on('SIGINT', () => {
+    console.log('\n\x1b[31m%s\x1b[0m', '🛑 Shutting down server...');
+    process.exit();
+});
+
+// Keep the process running
+process.stdin.resume();

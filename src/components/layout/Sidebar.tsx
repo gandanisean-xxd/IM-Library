@@ -9,7 +9,9 @@ import {
   Settings, 
   LogOut,
   BookMarked,
-  BarChart2
+  BarChart2,
+  Calendar,
+  DoorOpen
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -75,6 +77,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggle }) => {
       path: '/admin/books',
       icon: <BookOpen size={20} />,
       visible: isAdmin,
+    },
+    {
+    name: 'Room Reservations',
+    path: '/user/reservations',
+    icon: <Calendar size={20} />,
+    visible: !isStaff, // Only visible for students and faculty
+    },
+    {
+      name: 'Room Reservations',
+      path: '/librarian/room-reservations',
+      icon: <DoorOpen size={20} />,
+      visible: isLibrarian,
     },
     {
       name: 'Catalog',
